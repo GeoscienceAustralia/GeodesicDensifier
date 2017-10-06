@@ -29,9 +29,7 @@ except ImportError:
     sys.path.append(os.path.dirname(os.path.abspath(inspect.getsourcefile(lambda: 0))))
     from geographiclib.geodesic import Geodesic
 import math
-from qgis.core import QgsFeature
-from qgis.core import QgsGeometry
-from qgis.core import QgsPoint
+from qgis.core import *
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
 from PyQt4.QtGui import QAction, QIcon
 # Initialize Qt resources from file resources.py
@@ -195,6 +193,17 @@ class GeodesicDensifier:
         result = self.dlg.exec_()
         # See if OK was pressed
         if result:
+            # get geometry of active point layer
+            layer = self.iface.activeLayer()
+            point_list = []
+            if layer:
+                layer_iter = layer.getFeatures()
+                for feature in layer_iter:
+                    geom = feature.geometry()
+                    if geom.type() == QGis.Point:
+                        x = geom.asPoint()
+                        point_list.append(x)
+
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
             # Create a geographiclib Geodesic object
@@ -251,7 +260,11 @@ class GeodesicDensifier:
 
             # execute the function
             # Canberra to Darwin
-            polyline_list = densifypoints(-35.183, 149.1, -12.45, 130.8, 5000)
+            polyline_list = densifypoints(point_list[0][1],
+                                          point_list[0][0],
+                                          point_list[1][1],
+                                          point_list[1][0],
+                                          5000)
 
             # create and add to map canvas a memory layer
             line_layer = self.iface.addVectorLayer("LineString", "Line Layer", "memory")
@@ -270,7 +283,11 @@ class GeodesicDensifier:
 
             # execute the function symmetrical
             # Canberra to Darwin
-            polyline_list = densifypointssymmetrical(-35.183, 149.1, -12.45, 130.8, 5000)
+            polyline_list = densifypointssymmetrical(point_list[0][1],
+                                                     point_list[0][0],
+                                                     point_list[1][1],
+                                                     point_list[1][0],
+                                                     5000)
 
             # create and add to map canvas a memory layer
             line_layer = self.iface.addVectorLayer("LineString", "Line Layer Symmetrical", "memory")
