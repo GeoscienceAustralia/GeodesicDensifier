@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/GeodesicDensifier" >
+        <file>icon.png</file>
+    </qresource>
+</RCC>
