@@ -70,11 +70,9 @@ class GeodesicDensifier:
             if qVersion() > '4.3.3':
                 QCoreApplication.installTranslator(self.translator)
 
-
         # Declare instance attributes
         self.actions = []
         self.menu = self.tr(u'&Geodesic Densifier')
-        # TODO: We are going to let the user set this up in a future iteration
         self.toolbar = self.iface.addToolBar(u'GeodesicDensifier')
         self.toolbar.setObjectName(u'GeodesicDensifier')
 
@@ -92,7 +90,6 @@ class GeodesicDensifier:
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('GeodesicDensifier', message)
-
 
     def add_action(
         self,
@@ -180,7 +177,6 @@ class GeodesicDensifier:
             callback=self.run,
             parent=self.iface.mainWindow())
 
-
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
@@ -190,7 +186,6 @@ class GeodesicDensifier:
             self.iface.removeToolBarIcon(action)
         # remove the toolbar
         del self.toolbar
-
 
     def run(self):
         """Run method that performs all the real work"""
@@ -256,38 +251,38 @@ class GeodesicDensifier:
 
             # execute the function
             # Canberra to Darwin
-            polylineList = densifypoints(-35.183, 149.1, -12.45, 130.8, 5000)
+            polyline_list = densifypoints(-35.183, 149.1, -12.45, 130.8, 5000)
 
             # create and add to map canvas a memory layer
-            lineLayer = self.iface.addVectorLayer("LineString", "Line Layer", "memory")
+            line_layer = self.iface.addVectorLayer("LineString", "Line Layer", "memory")
 
             # create a feature
             ft = QgsFeature()
             # get geometry from the list-of-QgsPoint
             # noinspection PyArgumentList,PyCallByClass
-            polyline = QgsGeometry.fromPolyline(polylineList)
+            polyline = QgsGeometry.fromPolyline(polyline_list)
             # set geometry to the feature
             ft.setGeometry(polyline)
             # set data provider
-            pr = lineLayer.dataProvider()
+            pr = line_layer.dataProvider()
             # add feature to data provider
             pr.addFeatures([ft])
 
             # execute the function symmetrical
             # Canberra to Darwin
-            polylineList = densifypointssymmetrical(-35.183, 149.1, -12.45, 130.8, 5000)
+            polyline_list = densifypointssymmetrical(-35.183, 149.1, -12.45, 130.8, 5000)
 
             # create and add to map canvas a memory layer
-            lineLayer = self.iface.addVectorLayer("LineString", "Line Layer Symmetrical", "memory")
+            line_layer = self.iface.addVectorLayer("LineString", "Line Layer Symmetrical", "memory")
 
             # create a feature
             ft = QgsFeature()
             # get geometry from the list-of-QgsPoint
             # noinspection PyArgumentList,PyCallByClass
-            polyline = QgsGeometry.fromPolyline(polylineList)
+            polyline = QgsGeometry.fromPolyline(polyline_list)
             # set geometry to the feature
             ft.setGeometry(polyline)
             # set data provider
-            pr = lineLayer.dataProvider()
+            pr = line_layer.dataProvider()
             # add feature to data provider
             pr.addFeatures([ft])
