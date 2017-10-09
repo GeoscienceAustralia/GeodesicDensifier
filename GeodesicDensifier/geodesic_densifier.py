@@ -30,7 +30,7 @@ except ImportError:
     from geographiclib.geodesic import Geodesic
 import math
 from qgis.core import *
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
+from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant
 from PyQt4.QtGui import QAction, QIcon
 # Initialize Qt resources from file resources.py
 import resources
@@ -195,14 +195,15 @@ class GeodesicDensifier:
         if result:
             # get geometry of active point layer
             layer = self.iface.activeLayer()
-            point_list = []
+            # TODO check to see if QgsCoordinateReferenceSystem.isGeographic()
+            in_point_list = []
             if layer:
                 layer_iter = layer.getFeatures()
                 for feature in layer_iter:
                     geom = feature.geometry()
                     if geom.type() == QGis.Point:
                         x = geom.asPoint()
-                        point_list.append(x)
+                        in_point_list.append(x)
 
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
@@ -212,7 +213,7 @@ class GeodesicDensifier:
 
             def densifypoints(lat1, lon1, lat2, lon2, spacing):
                 # create an empty list to hold points
-                pline = []
+                dens_point_dict = {}
                 # create a geographiclib line object
                 line_object = geod.InverseLine(lat1, lon1, lat2, lon2)
                 # set the maximum separation between densified points
@@ -221,85 +222,57 @@ class GeodesicDensifier:
                 n = int(math.ceil(line_object.s13 / ds)) + 1
                 # adjust the spacing distance
                 ds = line_object.s13 / n
+                # this variable gives each point an ID
+                id = 0
                 # this variable tracks how far along the line we are
                 dist = 0.0
+                # this variable tracks whether it is an original or densified point
+                point_type = ''
                 # an extra segment is needed to add half of the modulo at the front of the line
                 for i in range(n + 1):
-                    g = line_object.Position(dist, Geodesic.STANDARD)
-                    # add points to the line
-                    pline.append(QgsPoint(g['lon2'], g['lat2']))
-                    dist += ds
-                return pline
-
-            def densifypointssymmetrical(lat1, lon1, lat2, lon2, spacing):
-                # create an empty list to hold points
-                pline = []
-                # create a geographiclib line object
-                line_object = geod.InverseLine(lat1, lon1, lat2, lon2)
-                # set the maximum separation between densified points
-                ds = spacing
-                # determine how many segments there will be
-                n = int(math.ceil(line_object.s13 / ds))
-                # this variable tracks how far along the line we are
-                dist = 0.0
-                # an extra segment is needed to add half of the modulo at the front of the line
-                for i in range(n + 2):
-                    if i == 0:
-                        dist = 0
-                    elif i == 1:
-                        dist = (line_object.s13 % ds) / 2
-                    elif i == n + 1:
-                        dist = line_object.s13
+                    if i == 0 or i == n:
+                        point_type = "Original"
                     else:
-                        dist += ds
+                        point_type = "Densified"
                     g = line_object.Position(dist, Geodesic.STANDARD)
-
                     # add points to the line
-                    pline.append(QgsPoint(g['lon2'], g['lat2']))
-                return pline
+                    dens_point_dict[id] = [g['lon2'], g['lat2'], point_type]
+                    dist += ds
+                    id += 1
+                return dens_point_dict
 
             # execute the function
             # Canberra to Darwin
-            polyline_list = densifypoints(point_list[0][1],
-                                          point_list[0][0],
-                                          point_list[1][1],
-                                          point_list[1][0],
-                                          5000)
+            point_dict = densifypoints(in_point_list[0][1],
+                                       in_point_list[0][0],
+                                       in_point_list[1][1],
+                                       in_point_list[1][0],
+                                       900)
 
             # create and add to map canvas a memory layer
-            line_layer = self.iface.addVectorLayer("LineString", "Line Layer", "memory")
-
-            # create a feature
-            ft = QgsFeature()
-            # get geometry from the list-of-QgsPoint
-            # noinspection PyArgumentList,PyCallByClass
-            polyline = QgsGeometry.fromPolyline(polyline_list)
-            # set geometry to the feature
-            ft.setGeometry(polyline)
+            point_layer = self.iface.addVectorLayer("Point", "Densified Point Layer", "memory")
             # set data provider
-            pr = line_layer.dataProvider()
-            # add feature to data provider
-            pr.addFeatures([ft])
+            pr = point_layer.dataProvider()
+            # add attribute fields
+            pr.addAttributes([QgsField("Sequence", QVariant.String),
+                              QgsField("ID", QVariant.String),
+                              QgsField("LAT", QVariant.Double),
+                              QgsField("LON", QVariant.Double),
+                              QgsField("PntType", QVariant.String),
+                              QgsField("DensT", QVariant.String)])
+            point_layer.updateFields()
 
-            # execute the function symmetrical
-            # Canberra to Darwin
-            polyline_list = densifypointssymmetrical(point_list[0][1],
-                                                     point_list[0][0],
-                                                     point_list[1][1],
-                                                     point_list[1][0],
-                                                     5000)
-
-            # create and add to map canvas a memory layer
-            line_layer = self.iface.addVectorLayer("LineString", "Line Layer Symmetrical", "memory")
-
-            # create a feature
-            ft = QgsFeature()
-            # get geometry from the list-of-QgsPoint
-            # noinspection PyArgumentList,PyCallByClass
-            polyline = QgsGeometry.fromPolyline(polyline_list)
-            # set geometry to the feature
-            ft.setGeometry(polyline)
-            # set data provider
-            pr = line_layer.dataProvider()
-            # add feature to data provider
-            pr.addFeatures([ft])
+            # loop through points adding geometry and attributes
+            for id in point_dict.keys():
+                # create a feature
+                feat = QgsFeature(point_layer.pendingFields())
+                # set geometry to the feature
+                feat.setGeometry(QgsGeometry.fromPoint(QgsPoint(point_dict[id][0], point_dict[id][1])))
+                # set attribute fields
+                feat.setAttribute("Sequence", "test")
+                feat.setAttribute("ID", str(id))
+                feat.setAttribute("LAT", float(point_dict[id][1]))
+                feat.setAttribute("LON", float(point_dict[id][0]))
+                feat.setAttribute("PntType", str(point_dict[id][2]))
+                feat.setAttribute("DensT", "G")
+                point_layer.dataProvider().addFeatures([feat])
