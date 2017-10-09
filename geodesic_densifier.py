@@ -195,10 +195,9 @@ class GeodesicDensifier:
         if result:
             # get geometry of active point layer
             layer = self.iface.activeLayer()
-            geographic_flag = layer.crs().geographicFlag()
             in_point_list = []
             if layer:
-                if geographic_flag:
+                if layer.crs().geographicFlag():
                     layer_iter = layer.getFeatures()
                     for feature in layer_iter:
                         geom = feature.geometry()
@@ -263,6 +262,8 @@ class GeodesicDensifier:
 
             # create and add to map canvas a memory layer
             point_layer = self.iface.addVectorLayer("Point", "Densified Point Layer", "memory")
+            # set projection
+            point_layer.setCrs(self.iface.activeLayer().crs())
             # set data provider
             pr = point_layer.dataProvider()
             # add attribute fields
