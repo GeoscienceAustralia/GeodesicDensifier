@@ -195,18 +195,30 @@ class GeodesicDensifier:
         if result:
             # get geometry of active point layer
             layer = self.iface.activeLayer()
-            # TODO check to see if QgsCoordinateReferenceSystem.isGeographic()
+            geographic_flag = layer.crs().geographicFlag()
             in_point_list = []
             if layer:
-                layer_iter = layer.getFeatures()
-                for feature in layer_iter:
-                    geom = feature.geometry()
-                    if geom.type() == QGis.Point:
-                        x = geom.asPoint()
-                        in_point_list.append(x)
+                if geographic_flag:
+                    layer_iter = layer.getFeatures()
+                    for feature in layer_iter:
+                        geom = feature.geometry()
+                        if geom.type() == QGis.Point:
+                            x = geom.asPoint()
+                            in_point_list.append(x)
+                else:
+                    pass
+                    # TODO add check for geogrphic CRS
 
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
+            ellipsoid_dict = {'165' : [6378165.000, 298.3],
+                              'ANS' : [6378160, 298.25],
+                              'CLARKE 1858' : [6378293.645, 294.26],
+                              'GRS80' : [6378137, 298.2572221],
+                              'WGS84' : [6378137, 298.2572236],
+                              'WGS72' : [6378135, 298.26],
+                              'International 1924' : [6378388, 297]}
+
             # Create a geographiclib Geodesic object
             # this is the GRS80 ellipsoid used for GDA94 EPSG:4283
             geod = Geodesic(6378137.0, 1 / 298.257222100882711243)
