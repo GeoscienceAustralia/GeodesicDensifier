@@ -187,46 +187,96 @@ class GeodesicDensifier:
 
     def run(self):
         """Run method that performs all the real work"""
+
+        # find all of the layers in the map
+        layers = []
+        for i in range(self.iface.mapCanvas().layerCount()):
+            layer = self.iface.mapCanvas().layer(i)
+            if layer.type() == layer.VectorLayer:
+                layers.append(layer)
+
+        # list of layer names
+        lyr_name_list = [layer.name() for layer in layers]
+
+        # clear the layer combo box
+        self.dlg.inLayerComboBox.clear()
+
+        # add layer names to layer combo box
+        self.dlg.inLayerComboBox.addItem('select layer to densify')
+        self.dlg.inLayerComboBox.addItems(lyr_name_list)
+
         # show the dialog
         self.dlg.show()
+
+        # set the layer to process
+        # create an empty layer object
+        self.inLayer = QgsVectorLayer()
+
+        def set_in_layer():
+            in_layername = self.dlg.inLayerComboBox.currentText()
+            for i in range(self.iface.mapCanvas().layerCount()):
+                layer = self.iface.mapCanvas().layer(i)
+                if layer.name() == in_layername:
+                    if layer.crs().geographicFlag():
+                        self.inLayer = layer
+                        self.dlg.messageBox.setText("Input Layer Set: " + str(in_layername))
+                    else:
+                        self.dlg.messageBox.setText("Error: Input must be in Geographic coordinates")
+
+        # listener to set input layer when combo box changes
+        self.dlg.inLayerComboBox.currentIndexChanged.connect(set_in_layer)
+
+        # clear the ellipsoid combobox
+        self.dlg.EllipsoidcomboBox.clear()
+
+        ellipsoid_dict = {'165': [6378165.000, 298.3],
+                          'ANS': [6378160, 298.25],
+                          'CLARKE 1858': [6378293.645, 294.26],
+                          'GRS80': [6378137, 298.2572221],
+                          'WGS84': [6378137, 298.2572236],
+                          'WGS72': [6378135, 298.26],
+                          'International 1924': [6378388, 297]}
+
+        # add items to ellipsoid combobox
+        for k in ellipsoid_dict.keys():
+            self.dlg.EllipsoidcomboBox.addItem(str(k))
+
+        # function to set ellipsoid from combobox
+        self.ellipsoid_a = 0.0
+        self.ellipsoid_f = 0.0
+        def set_in_ellipsoid():
+            in_ellipsoid_name = self.dlg.EllipsoidcomboBox.currentText()
+            for k in ellipsoid_dict.keys():
+                if k == in_ellipsoid_name:
+                    self.ellipsoid_a = ellipsoid_dict[k][0]
+                    self.ellipsoid_f = ellipsoid_dict[k][1]
+                    self.dlg.messageBox.setText("Ellipsoid set to " + str(k))
+
+        # listener to set input ellipsoid when combo box changes
+        self.dlg.EllipsoidcomboBox.currentIndexChanged.connect(set_in_ellipsoid)
+
+        # set the point spacing
+        self.spacing = 0
+        def set_in_spacing():
+            self.spacing = int(self.dlg.spacingSpinBox.value())
+            self.dlg.messageBox.setText("Point spacing set to " + str(self.spacing) + "m")
+
+        # listener to set input point spacing when spin box changes
+        self.dlg.spacingSpinBox.valueChanged.connect(set_in_spacing)
+
         # Run the dialog event loop
         result = self.dlg.exec_()
         # See if OK was pressed
         if result:
-            # get geometry of active point layer
-            layer = self.iface.activeLayer()
-            in_point_list = []
-            if layer:
-                if layer.crs().geographicFlag():
-                    layer_iter = layer.getFeatures()
-                    for feature in layer_iter:
-                        geom = feature.geometry()
-                        if geom.type() == QGis.Point:
-                            x = geom.asPoint()
-                            in_point_list.append(x)
-                else:
-                    pass
-                    # TODO add check for geogrphic CRS
-
-            # Do something useful here - delete the line containing pass and
-            # substitute with your code.
-            ellipsoid_dict = {'165' : [6378165.000, 298.3],
-                              'ANS' : [6378160, 298.25],
-                              'CLARKE 1858' : [6378293.645, 294.26],
-                              'GRS80' : [6378137, 298.2572221],
-                              'WGS84' : [6378137, 298.2572236],
-                              'WGS72' : [6378135, 298.26],
-                              'International 1924' : [6378388, 297]}
 
             # Create a geographiclib Geodesic object
-            # this is the GRS80 ellipsoid used for GDA94 EPSG:4283
-            geod = Geodesic(6378137.0, 1 / 298.257222100882711243)
+            self.geod = Geodesic(self.ellipsoid_a, 1 / self.ellipsoid_f)
 
             def densifypoints(lat1, lon1, lat2, lon2, spacing):
                 # create an empty list to hold points
                 dens_point_dict = {}
                 # create a geographiclib line object
-                line_object = geod.InverseLine(lat1, lon1, lat2, lon2)
+                line_object = self.geod.InverseLine(lat1, lon1, lat2, lon2)
                 # set the maximum separation between densified points
                 ds = spacing
                 # determine how many segments there will be
@@ -252,13 +302,21 @@ class GeodesicDensifier:
                     id += 1
                 return dens_point_dict
 
+            # get geometry of point layer
+            in_point_list = []
+            layer_iter = self.inLayer.getFeatures()
+            for feature in layer_iter:
+                geom = feature.geometry()
+                if geom.type() == QGis.Point:
+                    x = geom.asPoint()
+                    in_point_list.append(x)
+
             # execute the function
-            # Canberra to Darwin
             point_dict = densifypoints(in_point_list[0][1],
                                        in_point_list[0][0],
                                        in_point_list[1][1],
                                        in_point_list[1][0],
-                                       900)
+                                       self.spacing)
 
             # create and add to map canvas a memory layer
             point_layer = self.iface.addVectorLayer("Point", "Densified Point Layer", "memory")
