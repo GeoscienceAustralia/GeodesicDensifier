@@ -213,13 +213,13 @@ class GeodesicDensifier:
         self.inLayer = QgsVectorLayer()
 
         def set_in_layer():
-            in_layername = self.dlg.inLayerComboBox.currentText()
+            in_layer_name = self.dlg.inLayerComboBox.currentText()
             for i in range(self.iface.mapCanvas().layerCount()):
                 layer = self.iface.mapCanvas().layer(i)
-                if layer.name() == in_layername:
+                if layer.name() == in_layer_name:
                     if layer.crs().geographicFlag():
                         self.inLayer = layer
-                        self.dlg.messageBox.setText("Input Layer Set: " + str(in_layername))
+                        self.dlg.messageBox.setText("Input Layer Set: " + str(in_layer_name))
                     else:
                         self.dlg.messageBox.setText("Error: Input must be in Geographic coordinates")
 
@@ -244,19 +244,23 @@ class GeodesicDensifier:
         # function to set ellipsoid from combobox
         self.ellipsoid_a = 0.0
         self.ellipsoid_f = 0.0
+        self.ellipsoid_name = 'WGS84'
+
         def set_in_ellipsoid():
             in_ellipsoid_name = self.dlg.EllipsoidcomboBox.currentText()
             for k in ellipsoid_dict.keys():
                 if k == in_ellipsoid_name:
                     self.ellipsoid_a = ellipsoid_dict[k][0]
                     self.ellipsoid_f = ellipsoid_dict[k][1]
+                    self.ellipsoid_name = k
                     self.dlg.messageBox.setText("Ellipsoid set to " + str(k))
 
         # listener to set input ellipsoid when combo box changes
         self.dlg.EllipsoidcomboBox.currentIndexChanged.connect(set_in_ellipsoid)
 
         # set the point spacing
-        self.spacing = 0
+        self.spacing = 900
+
         def set_in_spacing():
             self.spacing = int(self.dlg.spacingSpinBox.value())
             self.dlg.messageBox.setText("Point spacing set to " + str(self.spacing) + "m")
@@ -284,11 +288,11 @@ class GeodesicDensifier:
                 # adjust the spacing distance
                 ds = line_object.s13 / n
                 # this variable gives each point an ID
-                id = 0
+                point_id = 0
                 # this variable tracks how far along the line we are
                 dist = 0.0
                 # this variable tracks whether it is an original or densified point
-                point_type = ''
+                point_type = 'error'
                 # an extra segment is needed to add half of the modulo at the front of the line
                 for i in range(n + 1):
                     if i == 0 or i == n:
@@ -297,9 +301,9 @@ class GeodesicDensifier:
                         point_type = "Densified"
                     g = line_object.Position(dist, Geodesic.STANDARD)
                     # add points to the line
-                    dens_point_dict[id] = [g['lon2'], g['lat2'], point_type]
+                    dens_point_dict[point_id] = [g['lon2'], g['lat2'], point_type]
                     dist += ds
-                    id += 1
+                    point_id += 1
                 return dens_point_dict
 
             # get geometry of point layer
@@ -319,7 +323,10 @@ class GeodesicDensifier:
                                        self.spacing)
 
             # create and add to map canvas a memory layer
-            point_layer = self.iface.addVectorLayer("Point", "Densified Point Layer", "memory")
+            layer_name = "Densified Point " + str(self.ellipsoid_name) + " " + str(self.spacing) + "m"
+            point_layer = self.iface.addVectorLayer("Point",
+                                                    layer_name,
+                                                    "memory")
             # set projection
             point_layer.setCrs(self.iface.activeLayer().crs())
             # set data provider
@@ -334,16 +341,17 @@ class GeodesicDensifier:
             point_layer.updateFields()
 
             # loop through points adding geometry and attributes
-            for id in point_dict.keys():
+            for k in point_dict.keys():
                 # create a feature
                 feat = QgsFeature(point_layer.pendingFields())
                 # set geometry to the feature
-                feat.setGeometry(QgsGeometry.fromPoint(QgsPoint(point_dict[id][0], point_dict[id][1])))
+                feat.setGeometry(QgsGeometry.fromPoint(QgsPoint(point_dict[k][0], point_dict[k][1])))
                 # set attribute fields
                 feat.setAttribute("Sequence", "test")
-                feat.setAttribute("ID", str(id))
-                feat.setAttribute("LAT", float(point_dict[id][1]))
-                feat.setAttribute("LON", float(point_dict[id][0]))
-                feat.setAttribute("PntType", str(point_dict[id][2]))
+                feat.setAttribute("ID", str(k))
+                feat.setAttribute("LAT", float(point_dict[k][1]))
+                feat.setAttribute("LON", float(point_dict[k][0]))
+                feat.setAttribute("PntType", str(point_dict[k][2]))
                 feat.setAttribute("DensT", "G")
                 point_layer.dataProvider().addFeatures([feat])
+                
