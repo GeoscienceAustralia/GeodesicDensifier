@@ -287,10 +287,24 @@ class GeodesicDensifier:
         # See if OK was pressed
         if result:
 
+            # set output types
+            if self.dlg.pointCheckBox.isChecked():
+                self.create_point = True
+            else:
+                self.create_point = False
+            if self.dlg.polygonCheckBox.isChecked():
+                self.create_polygon = True
+            else:
+                self.create_polygon = False
+            if self.dlg.polylineCheckBox.isChecked():
+                self.create_polyline = True
+            else:
+                self.create_polyline = False
+
             # Create a geographiclib Geodesic object
             self.geod = Geodesic(self.ellipsoid_a, 1 / self.ellipsoid_f)
             # create an empty dict to hold output points
-            self.dens_point_dict = {}
+            self.dens_point_list = []
 
             def densifypoints(lat1, lon1, lat2, lon2, ds, segment):
                 # create a geographiclib line object
@@ -311,10 +325,14 @@ class GeodesicDensifier:
                     else:
                         point_type = "Densified"
                     g = line_object.Position(dist, Geodesic.STANDARD)
-                    # add points to the line
-                    self.dens_point_dict[segment].append([point_id, g['lon2'], g['lat2'], point_type])
-                    dist += ds
-                    point_id += 1
+                    if i == n:
+                        dist += ds
+                        point_id += 1
+                    else:
+                        # add points to the line
+                        self.dens_point_list.append([segment, point_id, g['lon2'], g['lat2'], point_type])
+                        dist += ds
+                        point_id += 1
 
             # get geometry of point layer
             in_point_list = []
@@ -327,54 +345,138 @@ class GeodesicDensifier:
                     x = geom.asPoint()
                     in_point_list.append([uid, x])
 
-            # execute the function for every pair of points
-            for i in range(len(in_point_list)):
-                if i + 1 in range(len(in_point_list)):
-                    from_point = in_point_list[i]
-                    to_point = in_point_list[i+1]
-                    segment = str(in_point_list[i][0])
-                    self.dens_point_dict[segment] = []
-                    densifypoints(from_point[1][1],
-                                  from_point[1][0],
-                                  to_point[1][1],
-                                  to_point[1][0],
-                                  self.spacing,
-                                  segment)
+            if len(in_point_list) <= 2: # densify a pair of points
+                from_point = in_point_list[0]
+                to_point = in_point_list[1]
+                segment = str(in_point_list[0][0])
+                densifypoints(from_point[1][1],
+                              from_point[1][0],
+                              to_point[1][1],
+                              to_point[1][0],
+                              self.spacing,
+                              segment)
 
+            else:# densify more than two points
+                # create list of pairs as tuples
+                pair_list = zip(*[in_point_list[i:] + in_point_list[:i] for i in range(2)])
+                for pair in pair_list:
+                        from_point = pair[0]
+                        to_point = pair[1]
+                        segment = str(from_point[0])
+                        densifypoints(from_point[1][1],
+                                      from_point[1][0],
+                                      to_point[1][1],
+                                      to_point[1][0],
+                                      self.spacing,
+                                      segment)
+            print self.dens_point_list
             # get input projection
             in_crs = self.inLayer.crs().authid()
 
-            # create and add to map canvas a memory layer
-            layer_name = "Densified Point " + str(self.ellipsoid_name) + " " + str(self.spacing) + "m"
-            out_point_layer = self.iface.addVectorLayer("Point?crs={0}".format(in_crs),
-                                                        layer_name,
-                                                        "memory")
+            if self.create_point:
 
-            # set data provider
-            pr = out_point_layer.dataProvider()
-            # add attribute fields
-            pr.addAttributes([QgsField("Segment", QVariant.String),
-                              QgsField("ID", QVariant.String),
-                              QgsField("LAT", QVariant.Double),
-                              QgsField("LON", QVariant.Double),
-                              QgsField("PntType", QVariant.String),
-                              QgsField("DensT", QVariant.String)])
-            out_point_layer.updateFields()
+                # create and add to map canvas a point memory layer
+                layer_name = "Densified Point " + str(self.ellipsoid_name) + " " + str(self.spacing) + "m"
+                out_point_layer = self.iface.addVectorLayer("Point?crs={0}".format(in_crs),
+                                                            layer_name,
+                                                            "memory")
 
-            # loop through points adding geometry and attributes
-            for segment in self.dens_point_dict.keys():
-                for point in self.dens_point_dict[segment]:
+                # set data provider
+                pr = out_point_layer.dataProvider()
+                # add attribute fields
+                pr.addAttributes([QgsField("Segment", QVariant.String),
+                                  QgsField("ID", QVariant.String),
+                                  QgsField("LAT", QVariant.Double),
+                                  QgsField("LON", QVariant.Double),
+                                  QgsField("PntType", QVariant.String),
+                                  QgsField("DensT", QVariant.String)])
+                out_point_layer.updateFields()
+
+                # loop through points adding geometry and attributes
+                for pointObject in self.dens_point_list:
                     # create a feature
                     feat = QgsFeature(out_point_layer.pendingFields())
                     # set geometry to the feature
-                    x_value = point[1]
-                    y_value = point[2]
+                    x_value = pointObject[2]
+                    y_value = pointObject[3]
                     feat.setGeometry(QgsGeometry.fromPoint(QgsPoint(x_value, y_value)))
                     # set attribute fields
-                    feat.setAttribute("Segment", str(segment))
-                    feat.setAttribute("ID", point[0])
-                    feat.setAttribute("LAT", float(point[2]))
-                    feat.setAttribute("LON", float(point[1]))
-                    feat.setAttribute("PntType", point[3])
+                    feat.setAttribute("Segment", str(pointObject[0]))
+                    feat.setAttribute("ID", pointObject[1])
+                    feat.setAttribute("LAT", float(y_value))
+                    feat.setAttribute("LON", float(x_value))
+                    feat.setAttribute("PntType", pointObject[4])
                     feat.setAttribute("DensT", "G")
                     out_point_layer.dataProvider().addFeatures([feat])
+
+            if self.create_polyline:
+
+                # create and add to map canvas a polyline memory layer
+                layer_name = "Densified Line " + str(self.ellipsoid_name) + " " + str(self.spacing) + "m"
+                out_line_layer = self.iface.addVectorLayer("LineString?crs={0}".format(in_crs),
+                                                            layer_name,
+                                                            "memory")
+
+                # set data provider
+                pr = out_line_layer.dataProvider()
+                # add attribute fields
+                pr.addAttributes([QgsField("Segment", QVariant.String),
+                                  QgsField("DensT", QVariant.String)])
+                out_line_layer.updateFields()
+
+                # function to get list of unique segment ids
+                def uniques(seq):
+                    seen = {}
+                    result = []
+                    def idfun(x):
+                        return x
+                    for item in seq:
+                        marker = idfun(item)
+                        if marker in seen: continue
+                        seen[marker] = 1
+                        result.append(item)
+                    return result
+
+                segment_id_list = uniques([i[0] for i in self.dens_point_list])
+                for segment_id in segment_id_list:
+                    # TODO: make the segments extend to the next starting point
+                    QgsPoint_list = []
+                    feat = QgsFeature(out_line_layer.pendingFields())
+                    for i in range(len(self.dens_point_list)):
+                        pointObject = self.dens_point_list[i]
+                        if pointObject[0] == segment_id:
+                            QgsPoint_list.append(QgsPoint(pointObject[2],pointObject[3]))
+                    feat.setGeometry(QgsGeometry.fromPolyline(QgsPoint_list))
+                    # set attribute fields
+                    feat.setAttribute("Segment", str(segment))
+                    feat.setAttribute("DensT", "G")
+                    out_line_layer.dataProvider().addFeatures([feat])
+
+            if self.create_polygon:
+
+                # create and add to map canvas a polyline memory layer
+                layer_name = "Densified Polygon " + str(self.ellipsoid_name) + " " + str(self.spacing) + "m"
+                out_poly_layer = self.iface.addVectorLayer("Polygon?crs={0}".format(in_crs),
+                                                            layer_name,
+                                                            "memory")
+
+                # set data provider
+                pr = out_poly_layer.dataProvider()
+                # add attribute fields
+                pr.addAttributes([QgsField("DensT", QVariant.String)])
+                out_poly_layer.updateFields()
+
+                # loop through points adding geometry and attributes
+                point_list = []
+                for segment in self.dens_point_list:
+                    for i in range(len(self.dens_point_list[segment])):
+                        point = QgsPoint(self.dens_point_list[segment][i][1],
+                                         self.dens_point_list[segment][i][2])
+                        point_list.append(point)
+                # create a feature
+                feat = QgsFeature(out_poly_layer.pendingFields())
+                # set geometry to the feature
+                feat.setGeometry(QgsGeometry.fromPolygon([point_list]))
+                # set attribute fields
+                feat.setAttribute("DensT", "G")
+                out_poly_layer.dataProvider().addFeatures([feat])
