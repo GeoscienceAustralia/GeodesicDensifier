@@ -26,6 +26,7 @@ except ImportError:
     import sys
     import inspect
     import os
+
     sys.path.append(os.path.dirname(os.path.abspath(inspect.getsourcefile(lambda: 0))))
     from geographiclib.geodesic import Geodesic
 import math
@@ -90,16 +91,16 @@ class GeodesicDensifier:
         return QCoreApplication.translate('GeodesicDensifier', message)
 
     def add_action(
-        self,
-        icon_path,
-        text,
-        callback,
-        enabled_flag=True,
-        add_to_menu=True,
-        add_to_toolbar=True,
-        status_tip=None,
-        whats_this=None,
-        parent=None):
+            self,
+            icon_path,
+            text,
+            callback,
+            enabled_flag=True,
+            add_to_menu=True,
+            add_to_toolbar=True,
+            status_tip=None,
+            whats_this=None,
+            parent=None):
         """Add a toolbar icon to the toolbar.
 
         :param icon_path: Path to the icon for this action. Can be a resource
@@ -308,7 +309,7 @@ class GeodesicDensifier:
             self.dens_point_list = []
             self.dens_line_list = []
 
-            def densifypoints(lat1, lon1, lat2, lon2, ds, segment):
+            def densify_points(lat1, lon1, lat2, lon2, ds, segment):
                 # create a geographiclib line object
                 line_object = self.geod.InverseLine(lat1, lon1, lat2, lon2)
                 # determine how many densified segments there will be
@@ -336,7 +337,7 @@ class GeodesicDensifier:
                         dist += ds
                         point_id += 1
 
-            def densifyline(lat1, lon1, lat2, lon2, ds, segment):
+            def densify_line(lat1, lon1, lat2, lon2, ds, segment):
                 # create a geographiclib line object
                 line_object = self.geod.InverseLine(lat1, lon1, lat2, lon2)
                 # determine how many densified segments there will be
@@ -364,8 +365,6 @@ class GeodesicDensifier:
                     x = geom.asPoint()
                     in_point_list.append([uid, x])
 
-
-
             # get input projection
             in_crs = self.inLayer.crs().authid()
 
@@ -375,15 +374,15 @@ class GeodesicDensifier:
                     from_point = in_point_list[0]
                     to_point = in_point_list[1]
                     segment = str(in_point_list[0][0])
-                    densifypoints(from_point[1][1],
-                                  from_point[1][0],
-                                  to_point[1][1],
-                                  to_point[1][0],
-                                  self.spacing,
-                                  segment)
+                    densify_points(from_point[1][1],
+                                   from_point[1][0],
+                                   to_point[1][1],
+                                   to_point[1][0],
+                                   self.spacing,
+                                   segment)
                     # add last point
                     self.dens_point_list.append([segment,
-                                                 len(self.dens_point_list)+1,
+                                                 len(self.dens_point_list) + 1,
                                                  to_point[1][0],
                                                  to_point[1][1],
                                                  'Original'])
@@ -395,12 +394,12 @@ class GeodesicDensifier:
                         from_point = pair[0]
                         to_point = pair[1]
                         segment = str(from_point[0])
-                        densifypoints(from_point[1][1],
-                                      from_point[1][0],
-                                      to_point[1][1],
-                                      to_point[1][0],
-                                      self.spacing,
-                                      segment)
+                        densify_points(from_point[1][1],
+                                       from_point[1][0],
+                                       to_point[1][1],
+                                       to_point[1][0],
+                                       self.spacing,
+                                       segment)
 
                 # create and add to map canvas a point memory layer
                 layer_name = "Densified Point " + str(self.ellipsoid_name) + " " + str(self.spacing) + "m"
@@ -420,19 +419,19 @@ class GeodesicDensifier:
                 out_point_layer.updateFields()
 
                 # loop through points adding geometry and attributes
-                for pointObject in self.dens_point_list:
+                for point_object in self.dens_point_list:
                     # create a feature
                     feat = QgsFeature(out_point_layer.pendingFields())
                     # set geometry to the feature
-                    x_value = pointObject[2]
-                    y_value = pointObject[3]
+                    x_value = point_object[2]
+                    y_value = point_object[3]
                     feat.setGeometry(QgsGeometry.fromPoint(QgsPoint(x_value, y_value)))
                     # set attribute fields
-                    feat.setAttribute("Segment", str(pointObject[0]))
-                    feat.setAttribute("ID", pointObject[1])
+                    feat.setAttribute("Segment", str(point_object[0]))
+                    feat.setAttribute("ID", point_object[1])
                     feat.setAttribute("LAT", float(y_value))
                     feat.setAttribute("LON", float(x_value))
-                    feat.setAttribute("PntType", pointObject[4])
+                    feat.setAttribute("PntType", point_object[4])
                     feat.setAttribute("DensT", "G")
                     out_point_layer.dataProvider().addFeatures([feat])
 
@@ -442,12 +441,12 @@ class GeodesicDensifier:
                     from_point = in_point_list[0]
                     to_point = in_point_list[1]
                     segment = str(in_point_list[0][0])
-                    densifyline(from_point[1][1],
-                                  from_point[1][0],
-                                  to_point[1][1],
-                                  to_point[1][0],
-                                  self.spacing,
-                                  segment)
+                    densify_line(from_point[1][1],
+                                 from_point[1][0],
+                                 to_point[1][1],
+                                 to_point[1][0],
+                                 self.spacing,
+                                 segment)
 
                 else:  # densify more than one line segment and back to the start
                     # create list of pairs as tuples
@@ -456,18 +455,18 @@ class GeodesicDensifier:
                         from_point = pair[0]
                         to_point = pair[1]
                         segment = str(from_point[0])
-                        densifyline(from_point[1][1],
-                                      from_point[1][0],
-                                      to_point[1][1],
-                                      to_point[1][0],
-                                      self.spacing,
-                                      segment)
+                        densify_line(from_point[1][1],
+                                     from_point[1][0],
+                                     to_point[1][1],
+                                     to_point[1][0],
+                                     self.spacing,
+                                     segment)
 
                 # create and add to map canvas a polyline memory layer
                 layer_name = "Densified Line " + str(self.ellipsoid_name) + " " + str(self.spacing) + "m"
                 out_line_layer = self.iface.addVectorLayer("LineString?crs={0}".format(in_crs),
-                                                            layer_name,
-                                                            "memory")
+                                                           layer_name,
+                                                           "memory")
 
                 # set data provider
                 pr = out_line_layer.dataProvider()
@@ -478,11 +477,11 @@ class GeodesicDensifier:
 
                 for segmentObject in self.dens_line_list:
                     feat = QgsFeature(out_line_layer.pendingFields())
-                    QgsPoint_list = []
+                    qgs_point_list = []
                     for i in range(len(segmentObject[1])):
-                        pointObject = segmentObject[1][i]
-                        QgsPoint_list.append(QgsPoint(pointObject[0],pointObject[1]))
-                    feat.setGeometry(QgsGeometry.fromPolyline(QgsPoint_list))
+                        point_object = segmentObject[1][i]
+                        qgs_point_list.append(QgsPoint(point_object[0], point_object[1]))
+                    feat.setGeometry(QgsGeometry.fromPolyline(qgs_point_list))
                     # set attribute fields
                     feat.setAttribute("Segment", str(segmentObject[0]))
                     feat.setAttribute("DensT", "G")
@@ -493,8 +492,8 @@ class GeodesicDensifier:
                 # create and add to map canvas a polyline memory layer
                 layer_name = "Densified Polygon " + str(self.ellipsoid_name) + " " + str(self.spacing) + "m"
                 out_poly_layer = self.iface.addVectorLayer("Polygon?crs={0}".format(in_crs),
-                                                            layer_name,
-                                                            "memory")
+                                                           layer_name,
+                                                           "memory")
 
                 # set data provider
                 pr = out_poly_layer.dataProvider()
