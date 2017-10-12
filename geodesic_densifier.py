@@ -199,11 +199,10 @@ class GeodesicDensifier:
         self.inLayer = self.dlg.mMapLayerComboBox.currentLayer()
 
         def set_in_layer():
-            layer = self.dlg.mMapLayerComboBox.currentLayer()
-            if layer.crs().geographicFlag():
-                self.inLayer = layer
-                self.dlg.messageBox.setText("Input Layer Set: " + str(layer.name()))
-                self.dlg.mFieldComboBox.setLayer(layer)
+            self.inLayer = self.dlg.mMapLayerComboBox.currentLayer()
+            if self.inLayer.crs().geographicFlag():
+                self.dlg.messageBox.setText("Input Layer Set: " + str(self.inLayer.name()))
+                self.dlg.mFieldComboBox.setLayer(self.inLayer)
             else:
                 self.dlg.messageBox.setText("Error: Input must be in Geographic coordinates")
 
