@@ -193,9 +193,10 @@ class GeodesicDensifier:
         # show the dialog
         self.dlg.show()
 
-        # set the layer to process
-        # create an empty layer object
-        self.inLayer = QgsVectorLayer()
+        # set default values
+        self.dlg.mFieldComboBox.setLayer(self.dlg.mMapLayerComboBox.currentLayer())
+        self.in_uid_field = self.dlg.mFieldComboBox.currentField()
+        self.inLayer = self.dlg.mMapLayerComboBox.currentLayer()
 
         def set_in_layer():
             layer = self.dlg.mMapLayerComboBox.currentLayer()
@@ -208,9 +209,6 @@ class GeodesicDensifier:
 
         # listener to set input layer when combo box changes
         self.dlg.mMapLayerComboBox.layerChanged.connect(set_in_layer)
-
-        # set the uid field
-        self.in_uid_field = self.dlg.mFieldComboBox.currentField()
 
         # add field
         def set_in_field():
@@ -267,6 +265,9 @@ class GeodesicDensifier:
         result = self.dlg.exec_()
         # See if OK was pressed
         if result:
+
+            # set the uid field
+            self.in_uid_field = self.dlg.mFieldComboBox.currentField()
 
             # set output types
             if self.dlg.pointCheckBox.isChecked():
@@ -339,7 +340,7 @@ class GeodesicDensifier:
             layer_iter = self.inLayer.getFeatures()
             for feature in layer_iter:
                 geom = feature.geometry()
-                uid_idx = self.inLayer.fieldNameIndex(self.in_uid_field.name())
+                uid_idx = self.inLayer.fieldNameIndex(self.in_uid_field)
                 uid = feature.attributes()[uid_idx]
                 if geom.type() == QGis.Point:
                     x = geom.asPoint()
