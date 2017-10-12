@@ -133,7 +133,7 @@
     <item>
      <widget class="QLineEdit" name="messageBox">
       <property name="text">
-       <string>Messages: None</string>
+       <string>Choose a point layer</string>
       </property>
      </widget>
     </item>
