@@ -488,7 +488,7 @@ class GeodesicDensifier:
 
             if self.create_polygon:
 
-                if len(in_point_list) > 2: # need three points to make a polygon
+                if len(in_point_list) > 2:  # need three points to make a polygon
 
                     # create list of pairs as tuples
                     pair_list = zip(*[in_point_list[i:] + in_point_list[:i] for i in range(2)])
