@@ -31,6 +31,7 @@ except ImportError:
     from geographiclib.geodesic import Geodesic
 import math
 from qgis.core import *
+from qgis.gui import QgsMapLayerComboBox, QgsFieldComboBox, QgsMapLayerProxyModel
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant
 from PyQt4.QtGui import QAction, QIcon
 # Initialize Qt resources from file resources.py
@@ -189,23 +190,6 @@ class GeodesicDensifier:
     def run(self):
         """Run method that performs all the real work"""
 
-        # find all of the layers in the map
-        layers = []
-        for i in range(self.iface.mapCanvas().layerCount()):
-            layer = self.iface.mapCanvas().layer(i)
-            if layer.type() == layer.VectorLayer:
-                layers.append(layer)
-
-        # list of layer names
-        lyr_name_list = [layer.name() for layer in layers]
-
-        # clear the layer combo box
-        self.dlg.inLayerComboBox.clear()
-
-        # add layer names to layer combo box
-        self.dlg.inLayerComboBox.addItem('')
-        self.dlg.inLayerComboBox.addItems(lyr_name_list)
-
         # show the dialog
         self.dlg.show()
 
@@ -214,32 +198,28 @@ class GeodesicDensifier:
         self.inLayer = QgsVectorLayer()
 
         def set_in_layer():
-            in_layer_name = self.dlg.inLayerComboBox.currentText()
-            for i in range(self.iface.mapCanvas().layerCount()):
-                layer = self.iface.mapCanvas().layer(i)
-                if layer.name() == in_layer_name:
-                    if layer.crs().geographicFlag():
-                        self.inLayer = layer
-                        self.dlg.messageBox.setText("Input Layer Set: " + str(in_layer_name))
-                        for field in layer.pendingFields():
-                            self.dlg.uidFieldComboBox.addItem(field.name())
-                    else:
-                        self.dlg.messageBox.setText("Error: Input must be in Geographic coordinates")
+            layer = self.dlg.mMapLayerComboBox.currentLayer()
+            if layer.crs().geographicFlag():
+                self.inLayer = layer
+                self.dlg.messageBox.setText("Input Layer Set: " + str(layer.name()))
+                self.dlg.mFieldComboBox.setLayer(layer)
+            else:
+                self.dlg.messageBox.setText("Error: Input must be in Geographic coordinates")
 
         # listener to set input layer when combo box changes
-        self.dlg.inLayerComboBox.currentIndexChanged.connect(set_in_layer)
+        self.dlg.mMapLayerComboBox.layerChanged.connect(set_in_layer)
 
         # set the uid field
-        self.in_uid_field = QgsField()
+        self.in_uid_field = self.dlg.mFieldComboBox.currentField()
 
         # add field
         def set_in_field():
             for field in self.inLayer.pendingFields():
-                if field.name == self.dlg.uidFieldComboBox.currentText():
+                if field.name == self.dlg.mFieldComboBox.currentField():
                     self.in_uid_field = field
 
         # listener to set input uid field when combo box changes
-        self.dlg.uidFieldComboBox.currentIndexChanged.connect(set_in_field)
+        self.dlg.mFieldComboBox.fieldChanged.connect(set_in_field)
 
         # clear the ellipsoid combobox
         self.dlg.EllipsoidcomboBox.clear()

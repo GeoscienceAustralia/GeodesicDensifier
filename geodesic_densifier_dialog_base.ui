@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>393</width>
-    <height>364</height>
+    <width>386</width>
+    <height>344</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,7 +17,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>310</y>
+     <y>300</y>
      <width>351</width>
      <height>32</height>
     </rect>
@@ -47,7 +47,7 @@
      </widget>
     </item>
     <item>
-     <widget class="QComboBox" name="inLayerComboBox"/>
+     <widget class="QgsMapLayerComboBox" name="mMapLayerComboBox"/>
     </item>
    </layout>
   </widget>
@@ -189,11 +189,23 @@
      </widget>
     </item>
     <item>
-     <widget class="QComboBox" name="uidFieldComboBox"/>
+     <widget class="QgsFieldComboBox" name="mFieldComboBox"/>
     </item>
    </layout>
   </widget>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QgsFieldComboBox</class>
+   <extends>QComboBox</extends>
+   <header>qgis.gui.h</header>
+  </customwidget>
+  <customwidget>
+   <class>QgsMapLayerComboBox</class>
+   <extends>QComboBox</extends>
+   <header>qgis.gui.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>
