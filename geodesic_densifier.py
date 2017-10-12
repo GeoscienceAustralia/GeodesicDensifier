@@ -524,4 +524,3 @@ class GeodesicDensifier:
                     # set attribute fields
                     feat.setAttribute("DensT", "G")
                     out_poly_layer.dataProvider().addFeatures([feat])
-
