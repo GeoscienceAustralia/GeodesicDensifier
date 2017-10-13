@@ -30,6 +30,9 @@
         <property name="text">
          <string>Choose Layer</string>
         </property>
+        <property name="alignment">
+         <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+        </property>
        </widget>
       </item>
       <item>
@@ -44,6 +47,9 @@
         <property name="text">
          <string>Choose field with unique ID</string>
         </property>
+        <property name="alignment">
+         <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+        </property>
        </widget>
       </item>
       <item>
@@ -57,6 +63,9 @@
        <widget class="QLabel" name="label_2">
         <property name="text">
          <string>Choose Ellipsoid</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
         </property>
        </widget>
       </item>
@@ -95,6 +104,9 @@
        <widget class="QLabel" name="label">
         <property name="text">
          <string>Choose Output</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
         </property>
        </widget>
       </item>
