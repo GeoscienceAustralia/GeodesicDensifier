@@ -21,12 +21,11 @@
  ***************************************************************************/
 """
 try:
+    # use system version of geographiclib
     from geographiclib.geodesic import Geodesic
 except ImportError:
-    import sys
-    import inspect
-    import os
-
+    # use version of geographiclib distributed with plugin
+    import sys, inspect, os
     sys.path.append(os.path.dirname(os.path.abspath(inspect.getsourcefile(lambda: 0))))
     from geographiclib.geodesic import Geodesic
 import math
@@ -288,6 +287,7 @@ class GeodesicDensifier:
             # create empty lists to hold output points
             self.dens_point_list = []
             self.dens_line_list = []
+            self.dens_poly_list = []
 
             def densify_points(lat1, lon1, lat2, lon2, ds, segment):
                 # create a geographiclib line object
@@ -333,6 +333,23 @@ class GeodesicDensifier:
                     seg.append([g['lon2'], g['lat2']])
                     dist += ds
                 self.dens_line_list.append([segment, seg])
+
+            def densify_poly(lat1, lon1, lat2, lon2, ds, segment):
+                # create a geographiclib line object
+                line_object = self.geod.InverseLine(lat1, lon1, lat2, lon2)
+                # determine how many densified segments there will be
+                n = int(math.ceil(line_object.s13 / ds)) + 1
+                # adjust the spacing distance
+                ds = line_object.s13 / n
+                # this variable tracks how far along the line we are
+                dist = 0.0
+                # loop through all of the densified segments
+                seg = []
+                for i in range(n + 1):
+                    g = line_object.Position(dist, Geodesic.STANDARD)
+                    seg.append([g['lon2'], g['lat2']])
+                    dist += ds
+                self.dens_poly_list.append([segment, seg])
 
             # get geometry of input point layer
             in_point_list = []
@@ -476,7 +493,7 @@ class GeodesicDensifier:
                         from_point = pair[0]
                         to_point = pair[1]
                         segment = str(from_point[0])
-                        densify_line(from_point[1][1],
+                        densify_poly(from_point[1][1],
                                      from_point[1][0],
                                      to_point[1][1],
                                      to_point[1][0],
@@ -496,7 +513,7 @@ class GeodesicDensifier:
 
                     qgs_point_list = []
                     feat = QgsFeature(out_poly_layer.pendingFields())
-                    for segmentObject in self.dens_line_list:
+                    for segmentObject in self.dens_poly_list:
                         for i in range(len(segmentObject[1])):
                             point_object = segmentObject[1][i]
                             qgs_point_list.append(QgsPoint(point_object[0], point_object[1]))
