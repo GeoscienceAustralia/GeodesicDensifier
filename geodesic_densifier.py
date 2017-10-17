@@ -264,10 +264,16 @@ class GeodesicDensifier:
         # See if OK was pressed
         if result:
 
+            # set the input layer
+            self.inLayer = self.dlg.mMapLayerComboBox.currentLayer()
+
             # set the uid field
             self.in_uid_field = self.dlg.mFieldComboBox.currentField()
 
-            # set output types
+            # set input geometry type
+            # TODO: check geometry type and get points from each type (don't close points/lines)
+
+            # set output geometry type
             if self.dlg.pointCheckBox.isChecked():
                 self.create_point = True
             else:
