@@ -25,7 +25,9 @@ try:
     from geographiclib.geodesic import Geodesic
 except ImportError:
     # use version of geographiclib distributed with plugin
-    import sys, inspect, os
+    import sys
+    import inspect
+    import os
     sys.path.append(os.path.dirname(os.path.abspath(inspect.getsourcefile(lambda: 0))))
     from geographiclib.geodesic import Geodesic
 import math
