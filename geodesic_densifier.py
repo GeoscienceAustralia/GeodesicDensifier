@@ -273,7 +273,23 @@ class GeodesicDensifier:
             self.in_uid_field = self.dlg.mFieldComboBox.currentField()
 
             # set input geometry type
-            # TODO: check geometry type and get points from each type (don't close points/lines)
+            if self.inLayer.wkbType() == QGis.WKBPoint:
+                self.inType = 'Point'
+
+            if self.inLayer.wkbType() == QGis.WKBMultiPoint:
+                self.inType = 'MultiPoint'
+
+            if self.inLayer.wkbType() == QGis.WKBLineString:
+                self.inType = 'LineString'
+
+            if self.inLayer.wkbType() == QGis.WKBMultiLineString:
+                self.inType = 'MultiLineString'
+
+            if self.inLayer.wkbType() == QGis.WKBPolygon:
+                self.inType = 'Polygon'
+
+            if self.inLayer.wkbType() == QGis.WKBMultiPolygon:
+                self.inType = 'MultiPolygon'
 
             # set output geometry type
             if self.dlg.pointCheckBox.isChecked():
@@ -360,15 +376,25 @@ class GeodesicDensifier:
                 self.dens_poly_list.append([segment, seg])
 
             # get geometry of input point layer
+            # TODO: add MultiPoint, MultiLineString and MultiPolygon
             in_point_list = []
             layer_iter = self.inLayer.getFeatures()
             for feature in layer_iter:
                 geom = feature.geometry()
                 uid_idx = self.inLayer.fieldNameIndex(self.in_uid_field)
                 uid = feature.attributes()[uid_idx]
-                if geom.type() == QGis.Point:
-                    x = geom.asPoint()
-                    in_point_list.append([uid, x])
+                if self.inType == 'Point':
+                    pt = geom.asPoint()
+                    in_point_list.append([uid, pt])
+                if self.inType == 'LineString':
+                    ln = geom.asPolyline()
+                    for pt in ln:
+                        in_point_list.append([uid, pt])
+                if self.inType == 'Polygon':
+                    ply = geom.asPolygon()
+                    for ln in ply:
+                        for pt in ln:
+                            in_point_list.append([uid,pt])
 
             # get input projection
             in_crs = self.inLayer.crs().authid()
@@ -392,10 +418,10 @@ class GeodesicDensifier:
                                                  to_point[1][1],
                                                  'Original'])
 
-                else:  # densify more than two points and go back to the start
+                else:  # densify more than two points
                     # create list of pairs as tuples
                     pair_list = zip(*[in_point_list[i:] + in_point_list[:i] for i in range(2)])
-                    for pair in pair_list:
+                    for pair in pair_list[:-1]:
                         from_point = pair[0]
                         to_point = pair[1]
                         segment = str(from_point[0])
@@ -453,10 +479,10 @@ class GeodesicDensifier:
                                  self.spacing,
                                  segment)
 
-                else:  # densify more than one line segment and back to the start
+                else:  # densify more than one line segment
                     # create list of pairs as tuples
                     pair_list = zip(*[in_point_list[i:] + in_point_list[:i] for i in range(2)])
-                    for pair in pair_list:
+                    for pair in pair_list[:-1]:
                         from_point = pair[0]
                         to_point = pair[1]
                         segment = str(from_point[0])
@@ -494,7 +520,7 @@ class GeodesicDensifier:
             if self.create_polygon:
 
                 if len(in_point_list) > 2:  # need three points to make a polygon
-
+                    # densify all segments and back to the start
                     # create list of pairs as tuples
                     pair_list = zip(*[in_point_list[i:] + in_point_list[:i] for i in range(2)])
                     for pair in pair_list:
