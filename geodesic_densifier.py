@@ -34,7 +34,6 @@ except ImportError:
     from geographiclib.geodesic import Geodesic
 import math
 from qgis.core import *
-from qgis.gui import QgsMapLayerComboBox, QgsFieldComboBox, QgsMapLayerProxyModel
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant
 from PyQt4.QtGui import QAction, QIcon
 # Initialize Qt resources from file resources.py
@@ -400,7 +399,7 @@ class GeodesicDensifier:
                     ply = geom.asPolygon()
                     for ln in ply:
                         for pt in ln:
-                            in_point_list.append([uid,pt])
+                            in_point_list.append([uid, pt])
 
             # get input projection
             in_crs = self.inLayer.crs().authid()
