@@ -10,14 +10,14 @@
 name=Geodesic Densifier
 qgisMinimumVersion=2.0
 description=Adds vertices to geometry along geodesic lines
-version=0.2
+version=0.3
 author=Jonah Sullivan
 email=jonahsullivan79@gmail.com
 
 about=Add vertices between points along geodesic lines.
 
-tracker=https://github.com/jonahsullivan/GeodesicDensifier/issues
-repository=https://github.com/jonahsullivan/GeodesicDensifier
+tracker=https://github.com/GeoscienceAustralia/GeodesicDensifier/issues
+repository=https://github.com/GeoscienceAustralia/GeodesicDensifier
 # End of mandatory metadata
 
 # Recommended items:
@@ -28,7 +28,7 @@ repository=https://github.com/jonahsullivan/GeodesicDensifier
 # Tags are comma separated with spaces allowed
 tags=feature, geometry, point, polyline, vector, geodesic, densify
 
-homepage=https://github.com/jonahsullivan/GeodesicDensifier
+homepage=https://github.com/GeoscienceAustralia/GeodesicDensifier
 category=Plugins
 icon=icon.png
 # experimental flag
