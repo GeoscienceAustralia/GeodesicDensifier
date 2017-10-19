@@ -28,6 +28,8 @@ except ImportError:
     import sys
     import inspect
     import os
+    # this will get the path for this file and add it to the system PATH
+    # so the geographiclib folder can be found
     sys.path.append(os.path.dirname(os.path.abspath(inspect.getsourcefile(lambda: 0))))
     from geographiclib.geodesic import Geodesic
 import math
