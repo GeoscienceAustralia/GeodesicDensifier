@@ -332,18 +332,17 @@ class GeodesicDensifier:
                 # this variable tracks whether it is an original or densified point
                 # loop through all of the densified segments
                 for i in range(n + 1):
-                    if i == 0 or i == n:
+                    if i == 0:
                         point_type = "Original"
                     else:
                         point_type = "Densified"
-                    g = line_object.Position(dist, Geodesic.STANDARD)
                     if i == n:
-                        dist += ds
-                        point_id += 1
+                        pass
                     else:
+                        dist = ds * i
+                        g = line_object.Position(dist, Geodesic.STANDARD)
                         # add points to the line
                         self.dens_point_list.append([segment, point_id, g['lon2'], g['lat2'], point_type])
-                        dist += ds
                         point_id += 1
 
             def densify_line(lat1, lon1, lat2, lon2, ds, segment):
@@ -357,10 +356,10 @@ class GeodesicDensifier:
                 dist = 0.0
                 # loop through all of the densified segments
                 seg = []
-                for i in range(n + 1):
+                for i in range(1, n):
+                    dist = ds * i
                     g = line_object.Position(dist, Geodesic.STANDARD)
                     seg.append([g['lon2'], g['lat2']])
-                    dist += ds
                 self.dens_line_list.append([segment, seg])
 
             def densify_poly(lat1, lon1, lat2, lon2, ds, segment):
@@ -374,10 +373,10 @@ class GeodesicDensifier:
                 dist = 0.0
                 # loop through all of the densified segments
                 seg = []
-                for i in range(n + 1):
+                for i in range(1, n):
+                    dist = ds * i
                     g = line_object.Position(dist, Geodesic.STANDARD)
                     seg.append([g['lon2'], g['lat2']])
-                    dist += ds
                 self.dens_poly_list.append([segment, seg])
 
             # get geometry of input point layer
@@ -436,6 +435,12 @@ class GeodesicDensifier:
                                        to_point[1][0],
                                        self.spacing,
                                        segment)
+                    # add last point
+                    self.dens_point_list.append([segment,
+                                                 self.dens_point_list[-1][1] + 1,
+                                                 to_point[1][0],
+                                                 to_point[1][1],
+                                                 'Original'])
 
                 # create and add to map canvas a point memory layer
                 layer_name = "Densified Point " + str(self.ellipsoid_name) + " " + str(self.spacing) + "m"
