@@ -7,7 +7,7 @@
                              -------------------
         begin                : 2017-10-06
         copyright            : (C) 2017 by Jonah Sullivan
-        email                : jonahsullivan79@gmail.com
+        email                : jonah.sullivan@ga.gov.au
         git sha              : $Format:%H$
  ***************************************************************************/
 
