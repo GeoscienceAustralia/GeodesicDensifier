@@ -400,12 +400,12 @@ class GeodesicDensifier:
                         pointCount = len(line)
                         startPt = QgsPoint(line[0][0], line[0][1])
                         if layercrs != wgs84crs:
-                            startPt = transtowgs84(startPt)
+                            startPt = transtowgs84.transform(startPt)
                         pointList = [startPt]
                         for i in range(1,pointCount):
                             endPt = QgsPoint(line[i][0], line[i][1])
                             if layercrs != wgs84crs:
-                                endPt = transtowgs84(endPt)
+                                endPt = transtowgs84.transform(endPt)
                             # create a geographiclib line object
                             line_object = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(), endPt.x())
                             # determine how many densified segments there will be
@@ -420,7 +420,7 @@ class GeodesicDensifier:
                             startPt = endPt
                         if layercrs != wgs84crs:  # Convert each point back to the output CRS
                             for x, pt in enumerate(pointList):
-                                pointList[x] = transfrom4326.transform(pt)
+                                pointList[x] = transfromwgs84.transform(pt)
                         newLine.setGeometry(QgsGeometry.fromPolyline(pointList))
                     elif self.inType == 'MultiLineString':
                         outsegment = []
@@ -447,7 +447,7 @@ class GeodesicDensifier:
 
                             if layercrs != epsg4326:  # Convert each point back to the output CRS
                                 for x, pt in enumerate(pts):
-                                    pts[x] = transfrom4326.transform(pt)
+                                    pts[x] = transfromwgs84.transform(pt)
                             outsegment.append(pts)
 
                         newLine.setGeometry(QgsGeometry.fromMultiPolyline(outsegment))
