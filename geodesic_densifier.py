@@ -270,25 +270,22 @@ class GeodesicDensifier:
 
             # get input geometry type
             if self.inLayer.wkbType() == QGis.WKBPoint:
-                self.inType = 'Point'
+                self.inType = 'Point'           # works
 
             if self.inLayer.wkbType() == QGis.WKBMultiPoint:
-                self.inType = 'MultiPoint'
-                # multipoint won't be implemented
+                self.inType = 'MultiPoint'      # multipoint won't be implemented
 
             if self.inLayer.wkbType() == QGis.WKBLineString:
-                self.inType = 'LineString'
+                self.inType = 'LineString'      # works
 
             if self.inLayer.wkbType() == QGis.WKBMultiLineString:
-                self.inType = 'MultiLineString'
-
+                self.inType = 'MultiLineString' # not working
 
             if self.inLayer.wkbType() == QGis.WKBPolygon:
-                self.inType = 'Polygon'
+                self.inType = 'Polygon'         # works
 
             if self.inLayer.wkbType() == QGis.WKBMultiPolygon:
-                self.inType = 'MultiPolygon'
-                # TODO: multipolygon detection isn't working
+                self.inType = 'MultiPolygon'    # multipolygon detection isn't working
 
             # setup output layers
             if self.dlg.pointCheckBox.isChecked():
@@ -353,45 +350,52 @@ class GeodesicDensifier:
                 featureCount = pr.featureCount()
                 counter = 0
                 currentFeature = QgsFeature()
+                badGeom = 0
                 for feature in iterator:
-                    if counter == 0:
-                        geom = feature.geometry().asPoint()
-                        currentFeature.setGeometry(QgsGeometry.fromPoint(geom))
-                        attr = feature.attributes()
-                        attr.append("Original")
-                        currentFeature.setAttributes(attr)
-                        pr.addFeatures([currentFeature])
-                    elif counter > 0:
-                        startPt = currentFeature.geometry().asPoint()
-                        endPt = feature.geometry().asPoint()
-                        if self.inLayer.crs() != wgs84crs:
-                            startPt = transtowgs84.transform(startPt)
-                            endPt = transtowgs84.transform(endPt)
-                        # create a geographiclib line object
-                        lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(), endPt.x())
-                        # determine how many densified segments there will be
-                        n = int(math.ceil(lineObject.s13 / self.spacing))
-                        # adjust the spacing distance
-                        seglen = lineObject.s13 / n
-                        for i in range(1, n):
-                            if i > 0:
-                                s = seglen * i
-                                g = lineObject.Position(s, Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
-                                geom = QgsPoint(g['lon2'], g['lat2'])
-                                attr = feature.attributes()
-                                attr.append("Densified")
-                                currentFeature.setAttributes(attr)
-                                if self.inLayer.crs() != wgs84crs:  # Convert each point back to the output CRS
-                                    geom = transfromwgs84.transform(geom)
-                                currentFeature.setGeometry(QgsGeometry.fromPoint(geom))
-                                pr.addFeatures([currentFeature])
-                        geom = feature.geometry().asPoint()
-                        currentFeature.setGeometry(QgsGeometry.fromPoint(geom))
-                        attr = feature.attributes()
-                        attr.append("Original")
-                        currentFeature.setAttributes(attr)
-                        pr.addFeatures([currentFeature])
-                    counter += 1
+                    try:
+                        if counter == 0:
+                            geom = feature.geometry().asPoint()
+                            currentFeature.setGeometry(QgsGeometry.fromPoint(geom))
+                            attr = feature.attributes()
+                            attr.append("Original")
+                            currentFeature.setAttributes(attr)
+                            pr.addFeatures([currentFeature])
+                        elif counter > 0:
+                            startPt = currentFeature.geometry().asPoint()
+                            endPt = feature.geometry().asPoint()
+                            if self.inLayer.crs() != wgs84crs:
+                                startPt = transtowgs84.transform(startPt)
+                                endPt = transtowgs84.transform(endPt)
+                            # create a geographiclib line object
+                            lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(), endPt.x())
+                            # determine how many densified segments there will be
+                            n = int(math.ceil(lineObject.s13 / self.spacing))
+                            # adjust the spacing distance
+                            seglen = lineObject.s13 / n
+                            for i in range(1, n):
+                                if i > 0:
+                                    s = seglen * i
+                                    g = lineObject.Position(s, Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
+                                    geom = QgsPoint(g['lon2'], g['lat2'])
+                                    attr = feature.attributes()
+                                    attr.append("Densified")
+                                    currentFeature.setAttributes(attr)
+                                    if self.inLayer.crs() != wgs84crs:  # Convert each point back to the output CRS
+                                        geom = transfromwgs84.transform(geom)
+                                    currentFeature.setGeometry(QgsGeometry.fromPoint(geom))
+                                    pr.addFeatures([currentFeature])
+                            geom = feature.geometry().asPoint()
+                            currentFeature.setGeometry(QgsGeometry.fromPoint(geom))
+                            attr = feature.attributes()
+                            attr.append("Original")
+                            currentFeature.setAttributes(attr)
+                            pr.addFeatures([currentFeature])
+                        counter += 1
+                    except:
+                        badGeom += 1
+                if badGeom > 0:
+                    self.iface.messageBar().pushMessage("", "{} features failed".format(badGeom),
+                                                        level=QgsMessageBar.WARNING, duration=5)
 
             def densifyLine(inLayer, pr):
                 badGeom = 0
@@ -468,7 +472,8 @@ class GeodesicDensifier:
 
                     newLine.setAttributes(feature.attributes())
                     pr.addFeatures([newLine])
-                self.iface.messageBar().pushMessage("", "{} features failed".format(badGeom),
+                if badGeom > 0:
+                    self.iface.messageBar().pushMessage("", "{} features failed".format(badGeom),
                                                         level=QgsMessageBar.WARNING, duration=5)
 
             def densifyPolygon(inLayer, pr):
@@ -553,7 +558,8 @@ class GeodesicDensifier:
                             pr.addFeatures([outMultiPolygon])
                     except:
                         badGeom += 1
-                self.iface.messageBar().pushMessage("", "{} features failed".format(badGeom),
+                if badGeom > 0:
+                    self.iface.messageBar().pushMessage("", "{} features failed".format(badGeom),
                                                         level=QgsMessageBar.WARNING, duration=5)
 
             if self.create_point:
