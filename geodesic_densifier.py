@@ -274,6 +274,7 @@ class GeodesicDensifier:
 
             if self.inLayer.wkbType() == QGis.WKBMultiPoint:
                 self.inType = 'MultiPoint'
+                # multipoint won't be implemented
 
             if self.inLayer.wkbType() == QGis.WKBLineString:
                 self.inType = 'LineString'
@@ -281,11 +282,13 @@ class GeodesicDensifier:
             if self.inLayer.wkbType() == QGis.WKBMultiLineString:
                 self.inType = 'MultiLineString'
 
+
             if self.inLayer.wkbType() == QGis.WKBPolygon:
                 self.inType = 'Polygon'
 
             if self.inLayer.wkbType() == QGis.WKBMultiPolygon:
                 self.inType = 'MultiPolygon'
+                # TODO: multipolygon detection isn't working
 
             # setup output layers
             if self.dlg.pointCheckBox.isChecked():
@@ -357,16 +360,13 @@ class GeodesicDensifier:
                         attr = feature.attributes()
                         attr.append("Original")
                         currentFeature.setAttributes(attr)
-                        #startPt.setAttribute(pointTypeFieldIdx, "Original")
                         pr.addFeatures([currentFeature])
-                        if self.inLayer.crs() != wgs84crs:
-                            currentFeature.setGeometry(transtowgs84.transform(geom))
                     elif counter > 0:
                         startPt = currentFeature.geometry().asPoint()
                         endPt = feature.geometry().asPoint()
                         if self.inLayer.crs() != wgs84crs:
-                            startPt = transtowgs84(startPt)
-                            endPt = transtowgs84(endPt)
+                            startPt = transtowgs84.transform(startPt)
+                            endPt = transtowgs84.transform(endPt)
                         # create a geographiclib line object
                         lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(), endPt.x())
                         # determine how many densified segments there will be
@@ -377,23 +377,20 @@ class GeodesicDensifier:
                             if i > 0:
                                 s = seglen * i
                                 g = lineObject.Position(s, Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
-                                geom = QgsGeometry.fromPoint(QgsPoint(g['lon2'], g['lat2']))
+                                geom = QgsPoint(g['lon2'], g['lat2'])
                                 attr = feature.attributes()
                                 attr.append("Densified")
                                 currentFeature.setAttributes(attr)
                                 if self.inLayer.crs() != wgs84crs:  # Convert each point back to the output CRS
-                                    geom = transfromwgs84(geom)
-                                currentFeature.setGeometry(geom)
+                                    geom = transfromwgs84.transform(geom)
+                                currentFeature.setGeometry(QgsGeometry.fromPoint(geom))
                                 pr.addFeatures([currentFeature])
                         geom = feature.geometry().asPoint()
                         currentFeature.setGeometry(QgsGeometry.fromPoint(geom))
                         attr = feature.attributes()
                         attr.append("Original")
                         currentFeature.setAttributes(attr)
-                        # startPt.setAttribute(pointTypeFieldIdx, "Original")
                         pr.addFeatures([currentFeature])
-                        if self.inLayer.crs() != wgs84crs:
-                            currentFeature.setGeometry(transtowgs84.transform(geom))
                     counter += 1
 
             def densifyLine(inLayer, pr):
@@ -514,7 +511,7 @@ class GeodesicDensifier:
                             outPolygon.setAttributes(feature.attributes())
                             pr.addFeatures([outPolygon])
 
-                        else: # TODO: multipolygon detection isn't working
+                        else:
                             print "multipoly"
                             multipolygon = feature.geometry().asMultiPolygon()
                             multiPointList = []
