@@ -19,6 +19,17 @@
      <property name="margin">
       <number>3</number>
      </property>
+     <item row="3" column="0">
+      <layout class="QVBoxLayout" name="messageLayout">
+       <item>
+        <widget class="QLineEdit" name="messageBox">
+         <property name="text">
+          <string>Messages: None</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
      <item row="2" column="0">
       <layout class="QHBoxLayout" name="spacingLayout">
        <item>
@@ -60,48 +71,6 @@
        </item>
       </layout>
      </item>
-     <item row="3" column="0">
-      <layout class="QVBoxLayout" name="outputLayout">
-       <item>
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Choose Output</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout">
-         <item>
-          <widget class="QCheckBox" name="pointCheckBox">
-           <property name="text">
-            <string>Point</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="polylineCheckBox">
-           <property name="text">
-            <string>Polyline</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="polygonCheckBox">
-           <property name="text">
-            <string>Polygon</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-      </layout>
-     </item>
      <item row="1" column="0">
       <layout class="QVBoxLayout" name="ellipsoidLayout">
        <item>
@@ -120,17 +89,6 @@
       </layout>
      </item>
      <item row="4" column="0">
-      <layout class="QVBoxLayout" name="messageLayout">
-       <item>
-        <widget class="QLineEdit" name="messageBox">
-         <property name="text">
-          <string>Messages: None</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item row="5" column="0">
       <widget class="QDialogButtonBox" name="button_box">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
@@ -154,9 +112,6 @@
  <tabstops>
   <tabstop>button_box</tabstop>
   <tabstop>messageBox</tabstop>
-  <tabstop>pointCheckBox</tabstop>
-  <tabstop>polylineCheckBox</tabstop>
-  <tabstop>polygonCheckBox</tabstop>
  </tabstops>
  <resources/>
  <connections>
