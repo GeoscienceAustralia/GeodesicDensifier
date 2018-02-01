@@ -288,7 +288,7 @@ class GeodesicDensifier:
                 self.inType = 'MultiPolygon'    # multipolygon detection isn't working
 
             # setup output layers
-            if self.dlg.pointCheckBox.isChecked():
+            if self.inType == 'Point':
                 self.create_point = True
                 # create and add to map canvas a point memory layer
                 layer_name = "Densified Point " + str(self.ellipsoid_name) + " " + str(self.spacing) + "m"
@@ -311,7 +311,7 @@ class GeodesicDensifier:
             else:
                 self.create_point = False
 
-            if self.dlg.polylineCheckBox.isChecked():
+            if self.inType == 'LineString':
                 self.create_polyline = True
                 # create and add to map canvas a polyline memory layer
                 layer_name = "Densified Line " + str(self.ellipsoid_name) + " " + str(self.spacing) + "m"
@@ -326,7 +326,7 @@ class GeodesicDensifier:
             else:
                 self.create_polyline = False
 
-            if self.dlg.polygonCheckBox.isChecked():
+            if self.inType == 'Polygon':
                 self.create_polygon = True
                 # create and add to map canvas a polyline memory layer
                 layer_name = "Densified Polygon " + str(self.ellipsoid_name) + " " + str(self.spacing) + "m"
