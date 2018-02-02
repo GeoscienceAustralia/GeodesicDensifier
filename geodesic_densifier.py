@@ -269,22 +269,23 @@ class GeodesicDensifier:
                 transfromwgs84 = QgsCoordinateTransform(wgs84crs, self.inLayer.crs())
 
             # get input geometry type
+            self.inType = 'Unknown'
             if self.inLayer.wkbType() == QGis.WKBPoint:
                 self.inType = 'Point'           # works
 
-            if self.inLayer.wkbType() == QGis.WKBMultiPoint:
+            elif self.inLayer.wkbType() == QGis.WKBMultiPoint:
                 self.inType = 'MultiPoint'      # multipoint won't be implemented
 
-            if self.inLayer.wkbType() == QGis.WKBLineString:
+            elif self.inLayer.wkbType() == QGis.WKBLineString:
                 self.inType = 'LineString'      # works
 
-            if self.inLayer.wkbType() == QGis.WKBMultiLineString:
+            elif self.inLayer.wkbType() == QGis.WKBMultiLineString:
                 self.inType = 'MultiLineString' # not working
 
-            if self.inLayer.wkbType() == QGis.WKBPolygon:
+            elif self.inLayer.wkbType() == QGis.WKBPolygon:
                 self.inType = 'Polygon'         # works
 
-            if self.inLayer.wkbType() == QGis.WKBMultiPolygon:
+            elif self.inLayer.wkbType() == QGis.WKBMultiPolygon:
                 self.inType = 'MultiPolygon'    # multipolygon detection isn't working
 
             # setup output layers
@@ -566,10 +567,14 @@ class GeodesicDensifier:
                 densifyPoint(self.inLayer, pointPr)
                 out_point_layer.updateExtents()
 
-            if self.create_polyline:
+            elif self.create_polyline:
                 densifyLine(self.inLayer, linePr)
                 out_line_layer.updateExtents()
 
-            if self.create_polygon:
+            elif self.create_polygon:
                 densifyPolygon(self.inLayer, polyPr)
                 out_poly_layer.updateExtents()
+
+            else:
+                self.iface.messageBar().pushMessage("", "geometry type not recognized",
+                                                    level=QgsMessageBar.WARNING, duration=5)
