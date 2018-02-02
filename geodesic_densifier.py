@@ -32,7 +32,8 @@ except ImportError:
     site.addsitedir(os.path.abspath(os.path.dirname(__file__)))
     from geographiclib.geodesic import Geodesic
 import math
-from qgis.core import QgsCoordinateReferenceSystem, QgsCoordinateTransform, QGis, QgsFeature, QgsPoint, QgsGeometry, QgsField
+from qgis.core import QgsCoordinateReferenceSystem, QgsCoordinateTransform, \
+    QGis, QgsFeature, QgsPoint, QgsGeometry, QgsField
 from qgis.gui import QgsMessageBar
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant
 from PyQt4.QtGui import QAction, QIcon
@@ -274,19 +275,19 @@ class GeodesicDensifier:
                 self.inType = 'Point'           # works
 
             elif self.inLayer.wkbType() == QGis.WKBMultiPoint:
-                self.inType = 'MultiPoint'      # multipoint won't be implemented
+                self.inType = 'MultiPoint'          # multipoint won't be implemented
 
             elif self.inLayer.wkbType() == QGis.WKBLineString:
-                self.inType = 'LineString'      # works
+                self.inType = 'LineString'          # works
 
             elif self.inLayer.wkbType() == QGis.WKBMultiLineString:
-                self.inType = 'MultiLineString' # not working
+                self.inType = 'MultiLineString'     # not working
 
             elif self.inLayer.wkbType() == QGis.WKBPolygon:
-                self.inType = 'Polygon'         # works
+                self.inType = 'Polygon'             # works
 
             elif self.inLayer.wkbType() == QGis.WKBMultiPolygon:
-                self.inType = 'MultiPolygon'    # multipolygon detection isn't working
+                self.inType = 'MultiPolygon'        # multipolygon detection isn't working
 
             # setup output layers
             if self.inType == 'Point':
@@ -346,9 +347,7 @@ class GeodesicDensifier:
             self.geod = Geodesic(self.ellipsoid_a, 1 / self.ellipsoid_f)
 
             def densifyPoint(inLayer, pr):
-                pointTypeFieldIdx = pr.fieldNameIndex(pointTypeField)
                 iterator = inLayer.getFeatures()
-                featureCount = pr.featureCount()
                 counter = 0
                 currentFeature = QgsFeature()
                 badGeom = 0
@@ -376,7 +375,10 @@ class GeodesicDensifier:
                             for i in range(1, n):
                                 if i > 0:
                                     s = seglen * i
-                                    g = lineObject.Position(s, Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
+                                    g = lineObject.Position(s,
+                                                            Geodesic.LATITUDE |
+                                                            Geodesic.LONGITUDE |
+                                                            Geodesic.LONG_UNROLL)
                                     geom = QgsPoint(g['lon2'], g['lat2'])
                                     attr = feature.attributes()
                                     attr.append("Densified")
@@ -411,7 +413,6 @@ class GeodesicDensifier:
                             segments = feature.geometry().asMultiPolyline()
                         else:
                             badGeom += 1
-                        segmentCount = len(segments)
                     except:
                         badGeom += 1
                     if self.inType == 'LineString':
@@ -421,7 +422,7 @@ class GeodesicDensifier:
                         if self.inLayer.crs() != wgs84crs:
                             startPt = transtowgs84.transform(startPt)
                         pointList = [startPt]
-                        for i in range(1,pointCount):
+                        for i in range(1, pointCount):
                             endPt = QgsPoint(line[i][0], line[i][1])
                             if self.inLayer.crs() != wgs84crs:
                                 endPt = transtowgs84.transform(endPt)
@@ -431,9 +432,12 @@ class GeodesicDensifier:
                             n = int(math.ceil(lineObject.s13 / self.spacing))
                             if lineObject.s13 > self.spacing:
                                 seglen = lineObject.s13 / n
-                                for i in range(1, n):
-                                    s = seglen * i
-                                    g = lineObject.Position(s, Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
+                                for j in range(1, n):
+                                    s = seglen * j
+                                    g = lineObject.Position(s,
+                                                            Geodesic.LATITUDE |
+                                                            Geodesic.LONGITUDE |
+                                                            Geodesic.LONG_UNROLL)
                                     pointList.append(QgsPoint(g['lon2'], g['lat2']))
                             pointList.append(endPt)
                             startPt = endPt
@@ -446,12 +450,12 @@ class GeodesicDensifier:
                         for line in segments:
                             pointCount = len(line)
                             startPt = QgsPoint(line[0][0], line[0][1])
-                            if self.inLayer.crs() != epsg4326:  # Convert to 4326
+                            if self.inLayer.crs() != wgs84crs:  # Convert to 4326
                                 startPt = transtowgs84.transform(startPt)
                             pts = [startPt]
                             for x in range(1, pointCount):
                                 endPt = QgsPoint(line[x][0], line[x][1])
-                                if self.inLayer.crs() != epsg4326:  # Convert to 4326
+                                if self.inLayer.crs() != wgs84crs:  # Convert to 4326
                                     endPt = transtowgs84.transform(endPt)
                                 lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(), endPt.x())
                                 n = int(math.ceil(lineObject.s13 / self.spacing))
@@ -459,7 +463,10 @@ class GeodesicDensifier:
                                     seglen = lineObject.s13 / n
                                     for i in range(1, n):
                                         s = seglen * i
-                                        g = lineObject.Position(s, Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
+                                        g = lineObject.Position(s,
+                                                                Geodesic.LATITUDE |
+                                                                Geodesic.LONGITUDE |
+                                                                Geodesic.LONG_UNROLL)
                                         pts.append(QgsPoint(g['lon2'], g['lat2']))
                                 pts.append(endPt)
                                 startPt = endPt
@@ -481,13 +488,10 @@ class GeodesicDensifier:
                 badGeom = 0
                 iterator = inLayer.getFeatures()
                 # create empty feature to write to
-                newPoly = QgsFeature()
                 for feature in iterator:
                     try:
                         if self.inType == 'Polygon':
                             polygon = feature.geometry().asPolygon()
-                            polyCount = len(polygon)
-                            pointList = []
                             for points in polygon:
                                 pointCount = len(points)
                                 startPt = QgsPoint(points[0][0], points[0][1])
@@ -501,9 +505,12 @@ class GeodesicDensifier:
                                     lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(), endPt.x())
                                     n = int(math.ceil(lineObject.s13 / self.spacing))
                                     seglen = lineObject.s13 / n
-                                    for i in range(1, n):
-                                        s = seglen * i
-                                        g = lineObject.Position(s, Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
+                                    for j in range(1, n):
+                                        s = seglen * j
+                                        g = lineObject.Position(s,
+                                                                Geodesic.LATITUDE |
+                                                                Geodesic.LONGITUDE |
+                                                                Geodesic.LONG_UNROLL)
                                         polyPointList.append(QgsPoint(g['lon2'], g['lat2']))
                                     polyPointList.append(endPt)
                                     startPt = endPt
@@ -512,10 +519,11 @@ class GeodesicDensifier:
                                     for x, pt in enumerate(polyPointList):
                                         polyPointList[x] = transfromwgs84.transform(pt)
 
-                            outPolygon = QgsFeature()
-                            outPolygon.setGeometry(QgsGeometry.fromPolygon([polyPointList]))
-                            outPolygon.setAttributes(feature.attributes())
-                            pr.addFeatures([outPolygon])
+                            if len(polyPointList) > 0:
+                                outPolygon = QgsFeature()
+                                outPolygon.setGeometry(QgsGeometry.fromPolygon([polyPointList]))
+                                outPolygon.setAttributes(feature.attributes())
+                                pr.addFeatures([outPolygon])
 
                         else:
                             print "multipoly"
@@ -539,10 +547,12 @@ class GeodesicDensifier:
                                                                            endPt.x())
                                         n = int(math.ceil(lineObject.s13 / self.spacing))
                                         seglen = lineObject.s13 / n
-                                        for i in range(1, n):
-                                            s = seglen * i
+                                        for j in range(1, n):
+                                            s = seglen * j
                                             g = lineObject.Position(s,
-                                                                    Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
+                                                                    Geodesic.LATITUDE |
+                                                                    Geodesic.LONGITUDE |
+                                                                    Geodesic.LONG_UNROLL)
                                             polyPointList.append(QgsPoint(g['lon2'], g['lat2']))
                                         polyPointList.append(endPt)
                                         startPt = endPt
