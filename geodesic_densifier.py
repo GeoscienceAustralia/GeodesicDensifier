@@ -6,7 +6,7 @@
  Adds vertices to geometry along geodesic lines
                               -------------------
         begin                : 2017-10-06
-        git sha              : $Format:%H$
+        git sha              : $Format:%H$ test
         copyright            : (C) 2017 by Jonah Sullivan
         email                : jonah.sullivan@ga.gov.au
  ***************************************************************************/
