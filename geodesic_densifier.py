@@ -59,40 +59,12 @@ class GeodesicDensifier:
         self.iface = iface
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
-        # initialize locale
-        locale = QSettings().value('locale/userLocale')[0:2]
-        locale_path = os.path.join(
-            self.plugin_dir,
-            'i18n',
-            'GeodesicDensifier_{}.qm'.format(locale))
-
-        if os.path.exists(locale_path):
-            self.translator = QTranslator()
-            self.translator.load(locale_path)
-
-            if qVersion() > '4.3.3':
-                QCoreApplication.installTranslator(self.translator)
 
         # Declare instance attributes
         self.actions = []
-        self.menu = self.tr(u'&Geodesic Densifier')
+        self.menu = u'&Geodesic Densifier'
         self.toolbar = self.iface.addToolBar(u'GeodesicDensifier')
         self.toolbar.setObjectName(u'GeodesicDensifier')
-
-    # noinspection PyMethodMayBeStatic
-    def tr(self, message):
-        """Get the translation for a string using Qt translation API.
-
-        We implement this ourselves since we do not inherit QObject.
-
-        :param message: String for translation.
-        :type message: str, QString
-
-        :returns: Translated version of message.
-        :rtype: QString
-        """
-        # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
-        return QCoreApplication.translate('GeodesicDensifier', message)
 
     def add_action(
             self,
@@ -176,7 +148,7 @@ class GeodesicDensifier:
         icon_path = ':/plugins/GeodesicDensifier/icon.png'
         self.add_action(
             icon_path,
-            text=self.tr(u'Geodesic Densifier'),
+            text=u'Geodesic Densifier',
             callback=self.run,
             parent=self.iface.mainWindow())
 
@@ -184,8 +156,7 @@ class GeodesicDensifier:
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
             self.iface.removePluginMenu(
-                self.tr(u'&Geodesic Densifier'),
-                action)
+                u'&Geodesic Densifier', action)
             self.iface.removeToolBarIcon(action)
         # remove the toolbar
         del self.toolbar
@@ -200,6 +171,7 @@ class GeodesicDensifier:
         self.inLayer = self.dlg.mMapLayerComboBox.currentLayer()
 
         def set_in_layer():
+            """ function to set the input layer from the GUI """
             self.inLayer = self.dlg.mMapLayerComboBox.currentLayer()
             if self.inLayer:
                 if self.inLayer.crs():
@@ -213,6 +185,8 @@ class GeodesicDensifier:
         # clear the ellipsoid combobox
         self.dlg.EllipsoidcomboBox.clear()
 
+        # this is a dictionary of common ellipsoid parameters
+        # http://www.ga.gov.au/__data/assets/file/0019/11377/Vincentys-formulae-to-calculate-distance-and-bearing-from-latitude-and-longitude.xls
         ellipsoid_dict = {'165': [6378165.000, 298.3],
                           'ANS': [6378160, 298.25],
                           'CLARKE 1858': [6378293.645, 294.26],
@@ -231,6 +205,7 @@ class GeodesicDensifier:
         self.ellipsoid_name = 'WGS84'
 
         def set_in_ellipsoid():
+            """ This function gets the ellipsoid name from the GUI and sets the parameters """
             in_ellipsoid_name = self.dlg.EllipsoidcomboBox.currentText()
             for k in ellipsoid_dict.keys():
                 if k == in_ellipsoid_name:
@@ -246,6 +221,7 @@ class GeodesicDensifier:
         self.spacing = 900
 
         def set_in_spacing():
+            """ This function gets the spacing from the GUI and sets the parameter"""
             self.spacing = int(self.dlg.spacingSpinBox.value())
             self.dlg.messageBox.setText("Point spacing set to " + str(self.spacing) + "m")
 
@@ -301,13 +277,11 @@ class GeodesicDensifier:
                 pointPr = out_point_layer.dataProvider()
                 # add attribute fields
                 pointPr.addAttributes(fields)
+                # add field to store "original" or "densified" point attribute
                 pointTypeField = ''
-                if "pointType" not in [field.name() for field in fields]:
-                    pointTypeField = "pointType"
-                elif "pntType" not in [field.name() for field in fields]:
-                    pointTypeField = "pntType"
-                elif "pntTyp" not in [field.name() for field in fields]:
-                    pointTypeField = "pntTyp"
+                for fieldName in ["pointType", "pntType", "pntTyp"]:
+                if fieldName not in [field.name() for field in fields]:
+                    pointTypeField = fieldName
                 pointPr.addAttributes([QgsField(pointTypeField, QVariant.String)])
                 out_point_layer.updateFields()
             else:
@@ -347,13 +321,19 @@ class GeodesicDensifier:
             self.geod = Geodesic(self.ellipsoid_a, 1 / self.ellipsoid_f)
 
             def densifyPoint(inLayer, pr):
+                """ This function densifies the input point layer and writes it to the output provider"""
+                # iterator to read input layer
                 iterator = inLayer.getFeatures()
+                # counter to mark first point as "original"
                 counter = 0
+                # empty feature used to store temporary data
                 currentFeature = QgsFeature()
+                # counter to report features that don't work
                 badGeom = 0
                 for feature in iterator:
                     try:
                         if counter == 0:
+                            # this is only for the first point
                             geom = feature.geometry().asPoint()
                             currentFeature.setGeometry(QgsGeometry.fromPoint(geom))
                             attr = feature.attributes()
@@ -372,6 +352,7 @@ class GeodesicDensifier:
                             n = int(math.ceil(lineObject.s13 / self.spacing))
                             # adjust the spacing distance
                             seglen = lineObject.s13 / n
+                            # create densified points along the line object
                             for i in range(1, n):
                                 if i > 0:
                                     s = seglen * i
@@ -386,7 +367,9 @@ class GeodesicDensifier:
                                     if self.inLayer.crs() != wgs84crs:  # Convert each point back to the output CRS
                                         geom = transfromwgs84.transform(geom)
                                     currentFeature.setGeometry(QgsGeometry.fromPoint(geom))
+                                    # write the point
                                     pr.addFeatures([currentFeature])
+                            # write the last point
                             geom = feature.geometry().asPoint()
                             currentFeature.setGeometry(QgsGeometry.fromPoint(geom))
                             attr = feature.attributes()
@@ -397,16 +380,20 @@ class GeodesicDensifier:
                     except:
                         badGeom += 1
                 if badGeom > 0:
+                    # report number of features that didn't work
                     self.iface.messageBar().pushMessage("", "{} features failed".format(badGeom),
                                                         level=QgsMessageBar.WARNING, duration=5)
 
             def densifyLine(inLayer, pr):
+                # counter to report features that don't work
                 badGeom = 0
+                # iterator to read input layer
                 iterator = inLayer.getFeatures()
                 # create empty feature to write to
                 newLine = QgsFeature()
                 for feature in iterator:
                     try:
+                        # convert lineString into list of lists like a multiLineString so they are both processed the same way
                         if self.inType == 'LineString':
                             segments = [feature.geometry().asPolyline()]
                         elif self.inType == 'MultiLineString':
