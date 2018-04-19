@@ -41,7 +41,7 @@ from PyQt5.QtWidgets import QAction
 # Initialize Qt resources from file resources.py
 from .resources import *
 # Import the code for the dialog
-from geodesic_densifier_dialog import GeodesicDensifierDialog
+from .geodesic_densifier_dialog import GeodesicDensifierDialog
 import os.path
 
 class GeodesicDensifier:
@@ -145,7 +145,7 @@ class GeodesicDensifier:
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
-        icon_path = ':/plugins/GeodesicDensifier3/icon.png'
+        icon_path = ':/plugins/GeodesicDensifier/icon.png'
         self.add_action(
             icon_path,
             text=u'Geodesic Densifier',
