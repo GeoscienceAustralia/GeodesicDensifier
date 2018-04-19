@@ -33,8 +33,20 @@ except ImportError:
     site.addsitedir(dirname(abspath(getsourcefile(lambda: 0))))
     from geographiclib.geodesic import Geodesic
 import math
-from qgis.core import QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsWkbTypes, QgsFeature, QgsPointXY, QgsGeometry, QgsField, QgsProject
-from PyQt5.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QVariant
+from qgis.core import (QgsCoordinateReferenceSystem,
+                       QgsCoordinateTransform,
+                       QgsWkbTypes,
+                       QgsFeature,
+                       QgsPointXY,
+                       QgsGeometry,
+                       QgsField,
+                       QgsProject,
+                       QgsMapLayerProxyModel)
+from PyQt5.QtCore import (QSettings,
+                          QTranslator,
+                          qVersion,
+                          QCoreApplication,
+                          QVariant)
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QAction
 
@@ -62,6 +74,9 @@ class GeodesicDensifier:
 
         # Create the dialog (after translation) and keep reference
         self.dlg = GeodesicDensifierDialog()
+        self.dlg.mMapLayerComboBox.setFilters(QgsMapLayerProxyModel.LineLayer |
+                                              QgsMapLayerProxyModel.PolygonLayer |
+                                              QgsMapLayerProxyModel.PointLayer)
 
         # Declare instance attributes
         self.actions = []
@@ -185,13 +200,13 @@ class GeodesicDensifier:
         # clear the ellipsoid combobox
         self.dlg.EllipsoidcomboBox.clear()
 
-        ellipsoid_dict = {'WGS84': [6378137, 298.2572236],
-                          '165': [6378165.000, 298.3],
+        ellipsoid_dict = {'165': [6378165.000, 298.3],
                           'ANS': [6378160, 298.25],
                           'CLARKE 1858': [6378293.645, 294.26],
                           'GRS80': [6378137, 298.2572221],
                           'WGS72': [6378135, 298.26],
-                          'International 1924': [6378388, 297]}
+                          'International 1924': [6378388, 297],
+                          'WGS84': [6378137, 298.2572236]}
 
         # add items to ellipsoid combobox
         for k in list(ellipsoid_dict.keys()):
@@ -201,6 +216,7 @@ class GeodesicDensifier:
         self.ellipsoid_a = 6378137.0
         self.ellipsoid_f = 298.2572236
         self.ellipsoid_name = 'WGS84'
+        self.dlg.EllipsoidcomboBox.setCurrentText(self.ellipsoid_name)
 
         def set_in_ellipsoid():
             in_ellipsoid_name = self.dlg.EllipsoidcomboBox.currentText()
@@ -228,6 +244,9 @@ class GeodesicDensifier:
         result = self.dlg.exec_()
         # See if OK was pressed
         if result:
+
+            # check input parameters are valid
+            self.dlg.mMapLayerComboBox.currentLayer() != None
 
             # set the input layer
             self.inLayer = self.dlg.mMapLayerComboBox.currentLayer()
