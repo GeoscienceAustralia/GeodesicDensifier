@@ -8,7 +8,7 @@
 
 [general]
 name=Geodesic Densifier
-qgisMinimumVersion=2.0
+qgisMinimumVersion=3.0
 description=Adds vertices to geometry along geodesic lines
 version=0.5
 author=Jonah Sullivan
