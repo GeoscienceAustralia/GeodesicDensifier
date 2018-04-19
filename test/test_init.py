@@ -4,7 +4,7 @@
 __author__ = 'Tim Sutton <tim@linfiniti.com>'
 __revision__ = '$Format:%H$'
 __date__ = '17/10/2010'
-__license__ = "GPL"
+__license__ = "CC BY 4.0"
 __copyright__ = 'Copyright 2012, Australia Indonesia Facility for '
 __copyright__ += 'Disaster Reduction'
 
