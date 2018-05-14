@@ -49,15 +49,18 @@
         </widget>
        </item>
        <item>
-        <widget class="QSpinBox" name="spacingSpinBox">
+        <widget class="QDoubleSpinBox" name="spacingDoubleSpinBox">
          <property name="suffix">
           <string>m</string>
          </property>
+         <property name="decimals">
+          <number>1</number>
+         </property>
          <property name="maximum">
-          <number>5000</number>
+          <double>10000.000000000000000</double>
          </property>
          <property name="value">
-          <number>900</number>
+          <double>900.000000000000000</double>
          </property>
         </widget>
        </item>

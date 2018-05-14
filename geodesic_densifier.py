@@ -234,11 +234,11 @@ class GeodesicDensifier:
         self.spacing = 900
 
         def set_in_spacing():
-            self.spacing = int(self.dlg.spacingSpinBox.value())
+            self.spacing = float(self.dlg.spacingDoubleSpinBox.value())
             self.dlg.messageBox.setText("Point spacing set to " + str(self.spacing) + "m")
 
         # listener to set input point spacing when spin box changes
-        self.dlg.spacingSpinBox.valueChanged.connect(set_in_spacing)
+        self.dlg.spacingDoubleSpinBox.valueChanged.connect(set_in_spacing)
 
         # Run the dialog event loop
         result = self.dlg.exec_()
