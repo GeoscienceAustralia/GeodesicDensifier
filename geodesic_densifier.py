@@ -21,7 +21,6 @@
 try:
     # use system version of geographiclib
     from geographiclib.geodesic import Geodesic
-    print("import worked")
 except ImportError:
     # use version of geographiclib distributed with plugin
     import site
@@ -29,7 +28,6 @@ except ImportError:
     from inspect import getsourcefile
     # this will get the path for this file and add it to the system PATH
     # so the geographiclib folder can be found
-    print(dirname((getsourcefile(lambda:0))))
     site.addsitedir(dirname(abspath(getsourcefile(lambda: 0))))
     from geographiclib.geodesic import Geodesic
 import math
@@ -425,14 +423,15 @@ class GeodesicDensifier:
                                 seglen = lineObject.s13 / n
                                 for k in range(1, n):
                                     s = seglen * k
-                                    g = lineObject.Position(s,
-                                                            Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
-                                    dense_points.append(QgsPointXY(g['lon2'], g['lat2']))
+                                    g = lineObject.Position(s, Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
+                                    waypoint = QgsPointXY(g['lon2'], g['lat2'])
+                                    if self.inLayer.crs() != wgs84crs:
+                                        waypoint = transfromwgs84.transform(waypoint)
+                                    dense_points.append(waypoint)
+                                if self.inLayer.crs() != wgs84crs:
+                                    endPt = transfromwgs84.transform(endPt)
                                 dense_points.append(endPt)
                             startPt = endPt
-                        if self.inLayer.crs() != wgs84crs:  # Convert each point back to the output CRS
-                            for x, pt in enumerate(dense_points):
-                                dense_points[x] = transfromwgs84.transform(pt)
 
                     elif geomType == "MultiLineString":
                         dense_features = []
@@ -442,41 +441,10 @@ class GeodesicDensifier:
                             pointCount = len(line)
                             startPt = QgsPointXY(line[0][0], line[0][1])
                             dense_points.append(startPt)
-                            if self.inLayer.crs() != wgs84crs:
-                                startPt = transtowgs84.transform(startPt)
                             for j in range(1, pointCount):
                                 endPt = QgsPointXY(line[j][0], line[j][1])
                                 if self.inLayer.crs() != wgs84crs:
-                                    endPt = transtowgs84.transform(endPt)
-                                # create a geographiclib line object
-                                lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(), endPt.x())
-                                # determine how many densified segments there will be
-                                n = int(math.ceil(lineObject.s13 / self.spacing))
-                                if lineObject.s13 > self.spacing:
-                                    seglen = lineObject.s13 / n
-                                    for k in range(1, n):
-                                        s = seglen * k
-                                        g = lineObject.Position(s,
-                                                                Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
-                                        dense_points.append(QgsPointXY(g['lon2'], g['lat2']))
-                                    dense_points.append(endPt)
-                                startPt = endPt
-                            if self.inLayer.crs() != wgs84crs:  # Convert each point back to the output CRS
-                                for x, pt in enumerate(dense_points):
-                                    pointList[x] = transfromwgs84.transform(pt)
-                            dense_features.append(dense_points)
-
-                    elif geomType == "Polygon":
-                        for poly in poly_geom:
-                            dense_points = []
-                            pointCount = len(poly)
-                            startPt = QgsPointXY(poly[0][0], poly[0][1])
-                            dense_points.append(startPt)
-                            if self.inLayer.crs() != wgs84crs:
-                                startPt = transtowgs84.transform(startPt)
-                            for j in range(1,pointCount):
-                                endPt = QgsPointXY(poly[j][0], poly[j][1])
-                                if self.inLayer.crs() != wgs84crs:
+                                    startPt = transtowgs84.transform(startPt)
                                     endPt = transtowgs84.transform(endPt)
                                 # create a geographiclib line object
                                 lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(), endPt.x())
@@ -487,27 +455,57 @@ class GeodesicDensifier:
                                     for k in range(1, n):
                                         s = seglen * k
                                         g = lineObject.Position(s, Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
-                                        dense_points.append(QgsPointXY(g['lon2'], g['lat2']))
+                                        waypoint = QgsPointXY(g['lon2'], g['lat2'])
+                                        if self.inLayer.crs() != wgs84crs:
+                                            waypoint = transfromwgs84.transform(waypoint)
+                                        dense_points.append(waypoint)
+                                    if self.inLayer.crs() != wgs84crs:
+                                        endPt = transfromwgs84.transform(endPt)
                                     dense_points.append(endPt)
                                 startPt = endPt
-                            if self.inLayer.crs() != wgs84crs:  # Convert each point back to the output CRS
-                                for x, pt in enumerate(dense_points):
-                                    pointList[x] = transfromwgs84.transform(pt)
+                            dense_features.append(dense_points)
+
+                    elif geomType == "Polygon":
+                        for poly in poly_geom:
+                            dense_points = []
+                            pointCount = len(poly)
+                            startPt = QgsPointXY(poly[0][0], poly[0][1])
+                            dense_points.append(startPt)
+                            for j in range(1,pointCount):
+                                endPt = QgsPointXY(poly[j][0], poly[j][1])
+                                if self.inLayer.crs() != wgs84crs:
+                                    endPt = transtowgs84.transform(endPt)
+                                    startPt= transtowgs84.transform(startPt)
+                                # create a geographiclib line object
+                                lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(), endPt.x())
+                                # determine how many densified segments there will be
+                                n = int(math.ceil(lineObject.s13 / self.spacing))
+                                if lineObject.s13 > self.spacing:
+                                    seglen = lineObject.s13 / n
+                                    for k in range(1, n):
+                                        s = seglen * k
+                                        g = lineObject.Position(s, Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
+                                        waypoint = QgsPointXY(g['lon2'], g['lat2'])
+                                        if self.inLayer.crs() != wgs84crs:
+                                            waypoint = transfromwgs84.transform(waypoint)
+                                        dense_points.append(waypoint)
+                                    if self.inLayer.crs() != wgs84crs:
+                                        endPt = transfromwgs84.transform(endPt)
+                                    dense_points.append(endPt)
+                                startPt = endPt
 
                     if geomType == "MultiPolygon":
                         dense_features = []
                         for i in range(len(multipoly_geom)):
                             dense_points = []
                             poly = multipoly_geom[i][0]
-                            print(poly)
                             pointCount = len(poly)
                             startPt = QgsPointXY(poly[0][0], poly[0][1])
                             dense_points.append(startPt)
-                            if self.inLayer.crs() != wgs84crs:
-                                startPt = transtowgs84.transform(startPt)
                             for j in range(1, pointCount):
                                 endPt = QgsPointXY(poly[j][0], poly[j][1])
                                 if self.inLayer.crs() != wgs84crs:
+                                    startPt = transtowgs84.transform(startPt)
                                     endPt = transtowgs84.transform(endPt)
                                 # create a geographiclib line object
                                 lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(), endPt.x())
@@ -517,15 +515,15 @@ class GeodesicDensifier:
                                     seglen = lineObject.s13 / n
                                     for k in range(1, n):
                                         s = seglen * k
-                                        g = lineObject.Position(s,
-                                                                Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
-                                        dense_points.append(QgsPointXY(g['lon2'], g['lat2']))
+                                        g = lineObject.Position(s, Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
+                                        waypoint = QgsPointXY(g['lon2'], g['lat2'])
+                                        if self.inLayer.crs() != wgs84crs:
+                                            waypoint = transfromwgs84.transform(waypoint)
+                                        dense_points.append(waypoint)
+                                    if self.inLayer.crs() != wgs84crs:
+                                        endPt = transfromwgs84.transform(endPt)
                                     dense_points.append(endPt)
                                 startPt = endPt
-                            print(dense_points)
-                            if self.inLayer.crs() != wgs84crs:  # Convert each point back to the output CRS
-                                for x, pt in enumerate(dense_points):
-                                    pointList[x] = transfromwgs84.transform(pt)
                             dense_features.append(dense_points)
 
                     new_poly = QgsFeature()
