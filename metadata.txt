@@ -8,9 +8,9 @@
 
 [general]
 name=Geodesic Densifier
-qgisMinimumVersion=2.0
+qgisMinimumVersion=3.0
 description=Adds vertices to geometry along geodesic lines
-version=0.5
+version=0.7
 author=Jonah Sullivan
 email=jonah.sullivan@ga.gov.au
 
@@ -32,7 +32,7 @@ homepage=https://github.com/GeoscienceAustralia/GeodesicDensifier
 category=Plugins
 icon=icon.png
 # experimental flag
-experimental=True
+experimental=False
 
 # deprecated flag (applies to the whole plugin, not just a single version)
 deprecated=False
