@@ -168,6 +168,13 @@ class GeodesicDensifier:
         # set default values
         self.inLayer = self.dlg.mMapLayerComboBox.currentLayer()
 
+        # set segmenting method
+        self.segmentMethod = ''
+        if self.dlg.spacingRadioButton.isChecked() == True:
+            self.segmentMethod = 'spacing'
+        else:
+            self.segmentMethod = 'count'
+
         def set_in_layer():
             """ function to set the input layer from the GUI """
             self.inLayer = self.dlg.mMapLayerComboBox.currentLayer()
@@ -215,16 +222,31 @@ class GeodesicDensifier:
         # listener to set input ellipsoid when combo box changes
         self.dlg.EllipsoidcomboBox.currentIndexChanged.connect(set_in_ellipsoid)
 
-        # default point spacing is 900
+        # default is point spacing with 900m
         self.spacing = 900
+        self.dlg.spacingSpinBox.setValue(self.spacing)
+        self.dlg.spacingRadioButton.setChecked(True)
 
+        # choose segment length
         def set_in_spacing():
-            """ This function gets the spacing from the GUI and sets the parameter"""
             self.spacing = int(self.dlg.spacingSpinBox.value())
             self.dlg.messageBox.setText("Point spacing set to " + str(self.spacing) + "m")
 
         # listener to set input point spacing when spin box changes
         self.dlg.spacingSpinBox.valueChanged.connect(set_in_spacing)
+
+        # default segment number is 10
+        self.segmentCount = 10
+        self.dlg.segmentsSpinBox.setValue(self.segmentCount)
+        self.dlg.segmentsRadioButton.setChecked(False)
+
+        # choose number of segments
+        def set_in_segments():
+            self.segmentCount = int(self.dlg.segmentsSpinBox.value())
+            self.dlg.messageBox.setText("Segment count set to " + str(self.segmentCount))
+
+        # listener to set input point spacing when spin box changes
+        self.dlg.segmentsSpinBox.valueChanged.connect(set_in_segments)
 
         # Run the dialog event loop
         result = self.dlg.exec_()
@@ -233,6 +255,13 @@ class GeodesicDensifier:
 
             # set the input layer
             self.inLayer = self.dlg.mMapLayerComboBox.currentLayer()
+
+            # set segmenting method
+            self.segmentMethod = ''
+            if self.dlg.spacingRadioButton.isChecked() == True:
+                self.segmentMethod = 'spacing'
+            else:
+                self.segmentMethod = 'count'
 
             # get the field list
             fields = self.inLayer.pendingFields()
@@ -278,8 +307,8 @@ class GeodesicDensifier:
                 # add field to store "original" or "densified" point attribute
                 pointTypeField = ''
                 for fieldName in ["pointType", "pntType", "pntTyp"]:
-                if fieldName not in [field.name() for field in fields]:
-                    pointTypeField = fieldName
+                    if fieldName not in [field.name() for field in fields]:
+                        pointTypeField = fieldName
                 pointPr.addAttributes([QgsField(pointTypeField, QVariant.String)])
                 out_point_layer.updateFields()
             else:
@@ -347,7 +376,10 @@ class GeodesicDensifier:
                             # create a geographiclib line object
                             lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(), endPt.x())
                             # determine how many densified segments there will be
-                            n = int(math.ceil(lineObject.s13 / self.spacing))
+                            if self.segmentMethod == 'count':
+                                n = self.segmentCount
+                            else:
+                                n = int(math.ceil(lineObject.s13 / self.spacing))
                             # adjust the spacing distance
                             seglen = lineObject.s13 / n
                             # create densified points along the line object
@@ -414,7 +446,10 @@ class GeodesicDensifier:
                             # create a geographiclib line object
                             lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(), endPt.x())
                             # determine how many densified segments there will be
-                            n = int(math.ceil(lineObject.s13 / self.spacing))
+                            if self.segmentMethod == 'count':
+                                n = self.segmentCount
+                            else:
+                                n = int(math.ceil(lineObject.s13 / self.spacing))
                             if lineObject.s13 > self.spacing:
                                 seglen = lineObject.s13 / n
                                 for j in range(1, n):
@@ -443,7 +478,11 @@ class GeodesicDensifier:
                                 if self.inLayer.crs() != wgs84crs:  # Convert to 4326
                                     endPt = transtowgs84.transform(endPt)
                                 lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(), endPt.x())
-                                n = int(math.ceil(lineObject.s13 / self.spacing))
+                                # determine how many densified segments there will be
+                                if self.segmentMethod == 'count':
+                                    n = self.segmentCount
+                                else:
+                                    n = int(math.ceil(lineObject.s13 / self.spacing))
                                 if lineObject.s13 > self.spacing:
                                     seglen = lineObject.s13 / n
                                     for i in range(1, n):
@@ -488,7 +527,11 @@ class GeodesicDensifier:
                                     if self.inLayer.crs() != wgs84crs:  # Convert to 4326
                                         endPt = transtowgs84.transform(endPt)
                                     lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(), endPt.x())
-                                    n = int(math.ceil(lineObject.s13 / self.spacing))
+                                    # determine how many densified segments there will be
+                                    if self.segmentMethod == 'count':
+                                        n = self.segmentCount
+                                    else:
+                                        n = int(math.ceil(lineObject.s13 / self.spacing))
                                     seglen = lineObject.s13 / n
                                     for j in range(1, n):
                                         s = seglen * j
@@ -530,7 +573,11 @@ class GeodesicDensifier:
                                             endPt = transtowgs84.transform(endPt)
                                         lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(),
                                                                            endPt.x())
-                                        n = int(math.ceil(lineObject.s13 / self.spacing))
+                                        # determine how many densified segments there will be
+                                        if self.segmentMethod == 'count':
+                                            n = self.segmentCount
+                                        else:
+                                            n = int(math.ceil(lineObject.s13 / self.spacing))
                                         seglen = lineObject.s13 / n
                                         for j in range(1, n):
                                             s = seglen * j
