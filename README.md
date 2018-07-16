@@ -2,7 +2,7 @@
 QGIS plugin to densify geometries along geodesic lines
 
 ### License
-This software is licensed using Apache 2.0 License (see [LICENSE file](LICENSE.md)).
+This software is licensed using Apache 2.0 License (see [LICENSE file](LICENSE)).
 
 ## Contacts
 Author:  
