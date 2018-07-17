@@ -314,7 +314,7 @@ class GeodesicDensifier:
             else:
                 self.create_point = False
 
-            if self.inType == 'LineString':
+            if self.inType == 'LineString' or self.inType == 'MultiLineString':
                 self.create_polyline = True
                 # create and add to map canvas a polyline memory layer
                 layer_name = "Densified Line " + str(self.ellipsoid_name) + " " + str(self.spacing) + "m"
@@ -329,7 +329,7 @@ class GeodesicDensifier:
             else:
                 self.create_polyline = False
 
-            if self.inType == 'Polygon':
+            if self.inType == 'Polygon' or self.inType == 'MultiPolygon':
                 self.create_polygon = True
                 # create and add to map canvas a polyline memory layer
                 layer_name = "Densified Polygon " + str(self.ellipsoid_name) + " " + str(self.spacing) + "m"
@@ -414,33 +414,38 @@ class GeodesicDensifier:
                     self.iface.messageBar().pushMessage("", "{} features failed".format(badGeom),
                                                         level=QgsMessageBar.WARNING, duration=5)
 
-            def densifyLine(inLayer, pr):
-                # counter to report features that don't work
+            def densifyPoly(inLayer, pr):
                 badGeom = 0
-                # iterator to read input layer
                 iterator = inLayer.getFeatures()
                 # create empty feature to write to
-                newLine = QgsFeature()
                 for feature in iterator:
                     try:
-                        # convert lineString into list of lists like a multiLineString so they are both processed the same way
-                        if self.inType == 'LineString':
-                            segments = [feature.geometry().asPolyline()]
-                        elif self.inType == 'MultiLineString':
-                            segments = feature.geometry().asMultiPolyline()
+                        if feature.geometry().wkbType() == QGis.WKBLineString:
+                            line_geom = feature.geometry().asPolyline()
+                            geomType = "LineString"
+                        elif feature.geometry().wkbType() == QGis.WKBMultiLineString:
+                            multiline_geom = feature.geometry().asMultiPolyline()
+                            geomType = "MultiLineString"
+                        elif feature.geometry().wkbType() == QGis.WKBPolygon:
+                            poly_geom = feature.geometry().asPolygon()
+                            geomType = "Polygon"
+                        elif feature.geometry().wkbType() == QGis.WKBMultiPolygon:
+                            multipoly_geom = feature.geometry().asMultiPolygon()
+                            geomType = "MultiPolygon"
                         else:
                             badGeom += 1
                     except:
                         badGeom += 1
-                    if self.inType == 'LineString':
-                        line = segments[0]
-                        pointCount = len(line)
-                        startPt = QgsPoint(line[0][0], line[0][1])
+
+                    if geomType == "LineString":
+                        dense_points = []
+                        pointCount = len(line_geom)
+                        startPt = QgsPoint(line_geom[0][0], line_geom[0][1])
+                        dense_points.append(startPt)
                         if self.inLayer.crs() != wgs84crs:
                             startPt = transtowgs84.transform(startPt)
-                        pointList = [startPt]
-                        for i in range(1, pointCount):
-                            endPt = QgsPoint(line[i][0], line[i][1])
+                        for j in range(1, pointCount):
+                            endPt = QgsPoint(line_geom[j][0], line_geom[j][1])
                             if self.inLayer.crs() != wgs84crs:
                                 endPt = transtowgs84.transform(endPt)
                             # create a geographiclib line object
@@ -452,31 +457,33 @@ class GeodesicDensifier:
                                 n = int(math.ceil(lineObject.s13 / self.spacing))
                             if lineObject.s13 > self.spacing:
                                 seglen = lineObject.s13 / n
-                                for j in range(1, n):
-                                    s = seglen * j
+                                for k in range(1, n):
+                                    s = seglen * k
                                     g = lineObject.Position(s,
-                                                            Geodesic.LATITUDE |
-                                                            Geodesic.LONGITUDE |
-                                                            Geodesic.LONG_UNROLL)
-                                    pointList.append(QgsPoint(g['lon2'], g['lat2']))
-                            pointList.append(endPt)
+                                                            Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
+                                    waypoint = QgsPoint(g['lon2'], g['lat2'])
+                                    if self.inLayer.crs() != wgs84crs:
+                                        waypoint = transfromwgs84.transform(waypoint)
+                                    dense_points.append(waypoint)
+                                if self.inLayer.crs() != wgs84crs:
+                                    endPt = transfromwgs84.transform(endPt)
+                                dense_points.append(endPt)
                             startPt = endPt
-                        if self.inLayer.crs() != wgs84crs:  # Convert each point back to the output CRS
-                            for x, pt in enumerate(pointList):
-                                pointList[x] = transfromwgs84.transform(pt)
-                        newLine.setGeometry(QgsGeometry.fromPolyline(pointList))
-                    elif self.inType == 'MultiLineString':
-                        outsegment = []
-                        for line in segments:
+
+                    elif geomType == "MultiLineString":
+                        dense_features = []
+                        for i in range(len(multiline_geom)):
+                            dense_points = []
+                            line = multiline_geom[i]
                             pointCount = len(line)
                             startPt = QgsPoint(line[0][0], line[0][1])
-                            if self.inLayer.crs() != wgs84crs:  # Convert to 4326
-                                startPt = transtowgs84.transform(startPt)
-                            pts = [startPt]
-                            for x in range(1, pointCount):
-                                endPt = QgsPoint(line[x][0], line[x][1])
-                                if self.inLayer.crs() != wgs84crs:  # Convert to 4326
+                            dense_points.append(startPt)
+                            for j in range(1, pointCount):
+                                endPt = QgsPoint(line[j][0], line[j][1])
+                                if self.inLayer.crs() != wgs84crs:
+                                    startPt = transtowgs84.transform(startPt)
                                     endPt = transtowgs84.transform(endPt)
+                                # create a geographiclib line object
                                 lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(), endPt.x())
                                 # determine how many densified segments there will be
                                 if self.segmentMethod == 'count':
@@ -485,136 +492,113 @@ class GeodesicDensifier:
                                     n = int(math.ceil(lineObject.s13 / self.spacing))
                                 if lineObject.s13 > self.spacing:
                                     seglen = lineObject.s13 / n
-                                    for i in range(1, n):
-                                        s = seglen * i
+                                    for k in range(1, n):
+                                        s = seglen * k
                                         g = lineObject.Position(s,
-                                                                Geodesic.LATITUDE |
-                                                                Geodesic.LONGITUDE |
-                                                                Geodesic.LONG_UNROLL)
-                                        pts.append(QgsPoint(g['lon2'], g['lat2']))
-                                pts.append(endPt)
+                                                                Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
+                                        waypoint = QgsPoint(g['lon2'], g['lat2'])
+                                        if self.inLayer.crs() != wgs84crs:
+                                            waypoint = transfromwgs84.transform(waypoint)
+                                        dense_points.append(waypoint)
+                                    if self.inLayer.crs() != wgs84crs:
+                                        endPt = transfromwgs84.transform(endPt)
+                                    dense_points.append(endPt)
+                                startPt = endPt
+                            dense_features.append(dense_points)
+
+                    elif geomType == "Polygon":
+                        for poly in poly_geom:
+                            dense_points = []
+                            pointCount = len(poly)
+                            startPt = QgsPoint(poly[0][0], poly[0][1])
+                            dense_points.append(startPt)
+                            for j in range(1, pointCount):
+                                endPt = QgsPoint(poly[j][0], poly[j][1])
+                                if self.inLayer.crs() != wgs84crs:
+                                    endPt = transtowgs84.transform(endPt)
+                                    startPt = transtowgs84.transform(startPt)
+                                # create a geographiclib line object
+                                lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(), endPt.x())
+                                # determine how many densified segments there will be
+                                if self.segmentMethod == 'count':
+                                    n = self.segmentCount
+                                else:
+                                    n = int(math.ceil(lineObject.s13 / self.spacing))
+                                if lineObject.s13 > self.spacing:
+                                    seglen = lineObject.s13 / n
+                                    for k in range(1, n):
+                                        s = seglen * k
+                                        g = lineObject.Position(s,
+                                                                Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
+                                        waypoint = QgsPoint(g['lon2'], g['lat2'])
+                                        if self.inLayer.crs() != wgs84crs:
+                                            waypoint = transfromwgs84.transform(waypoint)
+                                        dense_points.append(waypoint)
+                                    if self.inLayer.crs() != wgs84crs:
+                                        endPt = transfromwgs84.transform(endPt)
+                                    dense_points.append(endPt)
                                 startPt = endPt
 
-                            if self.inLayer.crs() != wgs84crs:  # Convert each point back to the output CRS
-                                for x, pt in enumerate(pts):
-                                    pts[x] = transfromwgs84.transform(pt)
-                            outsegment.append(pts)
-
-                        newLine.setGeometry(QgsGeometry.fromMultiPolyline(outsegment))
-
-                    newLine.setAttributes(feature.attributes())
-                    pr.addFeatures([newLine])
-                if badGeom > 0:
-                    self.iface.messageBar().pushMessage("", "{} features failed".format(badGeom),
-                                                        level=QgsMessageBar.WARNING, duration=5)
-
-            def densifyPolygon(inLayer, pr):
-                badGeom = 0
-                iterator = inLayer.getFeatures()
-                # create empty feature to write to
-                for feature in iterator:
-                    try:
-                        if self.inType == 'Polygon':
-                            polygon = feature.geometry().asPolygon()
-                            for points in polygon:
-                                pointCount = len(points)
-                                startPt = QgsPoint(points[0][0], points[0][1])
+                    if geomType == "MultiPolygon":
+                        dense_features = []
+                        for i in range(len(multipoly_geom)):
+                            dense_points = []
+                            poly = multipoly_geom[i][0]
+                            pointCount = len(poly)
+                            startPt = QgsPoint(poly[0][0], poly[0][1])
+                            dense_points.append(startPt)
+                            for j in range(1, pointCount):
+                                endPt = QgsPoint(poly[j][0], poly[j][1])
                                 if self.inLayer.crs() != wgs84crs:
                                     startPt = transtowgs84.transform(startPt)
-                                polyPointList = [startPt]
-                                for i in range(1, pointCount):
-                                    endPt = QgsPoint(points[i][0], points[i][1])
-                                    if self.inLayer.crs() != wgs84crs:  # Convert to 4326
-                                        endPt = transtowgs84.transform(endPt)
-                                    lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(), endPt.x())
-                                    # determine how many densified segments there will be
-                                    if self.segmentMethod == 'count':
-                                        n = self.segmentCount
-                                    else:
-                                        n = int(math.ceil(lineObject.s13 / self.spacing))
+                                    endPt = transtowgs84.transform(endPt)
+                                # create a geographiclib line object
+                                lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(), endPt.x())
+                                # determine how many densified segments there will be
+                                if self.segmentMethod == 'count':
+                                    n = self.segmentCount
+                                else:
+                                    n = int(math.ceil(lineObject.s13 / self.spacing))
+                                if lineObject.s13 > self.spacing:
                                     seglen = lineObject.s13 / n
-                                    for j in range(1, n):
-                                        s = seglen * j
+                                    for k in range(1, n):
+                                        s = seglen * k
                                         g = lineObject.Position(s,
-                                                                Geodesic.LATITUDE |
-                                                                Geodesic.LONGITUDE |
-                                                                Geodesic.LONG_UNROLL)
-                                        polyPointList.append(QgsPoint(g['lon2'], g['lat2']))
-                                    polyPointList.append(endPt)
-                                    startPt = endPt
-
-                                if self.inLayer.crs() != wgs84crs:
-                                    for x, pt in enumerate(polyPointList):
-                                        polyPointList[x] = transfromwgs84.transform(pt)
-
-                            if len(polyPointList) > 0:
-                                outPolygon = QgsFeature()
-                                outPolygon.setGeometry(QgsGeometry.fromPolygon([polyPointList]))
-                                outPolygon.setAttributes(feature.attributes())
-                                pr.addFeatures([outPolygon])
-
-                        else:
-                            print "multipoly"
-                            multipolygon = feature.geometry().asMultiPolygon()
-                            multiPointList = []
-                            for polygon in multipolygon:
-                                polyPointList = []
-                                for points in polygon:
-                                    print 'points:', points
-                                    pointCount = len(points)
-                                    startPt = QgsPoint(points[0][0], points[0][1])
-                                    print 'startPt:', startPt
+                                                                Geodesic.LATITUDE | Geodesic.LONGITUDE | Geodesic.LONG_UNROLL)
+                                        waypoint = QgsPoint(g['lon2'], g['lat2'])
+                                        if self.inLayer.crs() != wgs84crs:
+                                            waypoint = transfromwgs84.transform(waypoint)
+                                        dense_points.append(waypoint)
                                     if self.inLayer.crs() != wgs84crs:
-                                        startPt = transtowgs84.transform(startPt)
-                                    polyPointList = [startPt]
-                                    for i in range(1, pointCount):
-                                        endPt = QgsPoint(points[i][0], points[i][1])
-                                        if self.inLayer.crs() != wgs84crs:  # Convert to 4326
-                                            endPt = transtowgs84.transform(endPt)
-                                        lineObject = self.geod.InverseLine(startPt.y(), startPt.x(), endPt.y(),
-                                                                           endPt.x())
-                                        # determine how many densified segments there will be
-                                        if self.segmentMethod == 'count':
-                                            n = self.segmentCount
-                                        else:
-                                            n = int(math.ceil(lineObject.s13 / self.spacing))
-                                        seglen = lineObject.s13 / n
-                                        for j in range(1, n):
-                                            s = seglen * j
-                                            g = lineObject.Position(s,
-                                                                    Geodesic.LATITUDE |
-                                                                    Geodesic.LONGITUDE |
-                                                                    Geodesic.LONG_UNROLL)
-                                            polyPointList.append(QgsPoint(g['lon2'], g['lat2']))
-                                        polyPointList.append(endPt)
-                                        startPt = endPt
+                                        endPt = transfromwgs84.transform(endPt)
+                                    dense_points.append(endPt)
+                                startPt = endPt
+                            dense_features.append(dense_points)
 
-                                    if self.inLayer.crs() != wgs84crs:
-                                        for x, pt in enumerate(polyPointList):
-                                            polyPointList[x] = transfromwgs84.transform(pt)
-                                    print 'polypointlist', polyPointList
-                                multiPointList.append(polyPointList)
-
-                            outMultiPolygon = QgsFeature()
-                            outMultiPolygon.setGeometry(QgsGeometry.fromMultiPolygon(multiPointList))
-                            outMultiPolygon.setAttributes(feature.attributes())
-                            pr.addFeatures([outMultiPolygon])
-                    except:
-                        badGeom += 1
+                    new_poly = QgsFeature()
+                    if geomType == "LineString":
+                        new_poly.setGeometry(QgsGeometry.fromPolyline(dense_points))
+                    elif geomType == "MultiLineString":
+                        new_poly.setGeometry(QgsGeometry.fromMultiPolyline(dense_features))
+                    elif geomType == "Polygon":
+                        new_poly.setGeometry(QgsGeometry.fromPolygon([dense_points]))
+                    elif geomType == "MultiPolygon":
+                        new_poly.setGeometry(QgsGeometry.fromMultiPolygon([dense_features]))
+                    new_poly.setAttributes(feature.attributes())
+                    pr.addFeatures([new_poly])
                 if badGeom > 0:
-                    self.iface.messageBar().pushMessage("", "{} features failed".format(badGeom),
-                                                        level=QgsMessageBar.WARNING, duration=5)
+                    self.iface.messageBar().pushWarning("", "{} features failed".format(badGeom))
 
             if self.create_point:
                 densifyPoint(self.inLayer, pointPr)
                 out_point_layer.updateExtents()
 
             elif self.create_polyline:
-                densifyLine(self.inLayer, linePr)
+                densifyPoly(self.inLayer, linePr)
                 out_line_layer.updateExtents()
 
             elif self.create_polygon:
-                densifyPolygon(self.inLayer, polyPr)
+                densifyPoly(self.inLayer, polyPr)
                 out_poly_layer.updateExtents()
 
             else:
