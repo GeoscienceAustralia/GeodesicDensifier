@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>351</width>
-    <height>293</height>
+    <width>383</width>
+    <height>227</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,20 +16,18 @@
   <layout class="QGridLayout" name="gridLayout_2">
    <item row="0" column="0">
     <layout class="QGridLayout" name="gridLayout">
-     <property name="margin">
+     <property name="leftMargin">
       <number>3</number>
      </property>
-     <item row="4" column="0">
-      <layout class="QVBoxLayout" name="messageLayout">
-       <item>
-        <widget class="QLineEdit" name="messageBox">
-         <property name="text">
-          <string>Messages: None</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
+     <property name="topMargin">
+      <number>3</number>
+     </property>
+     <property name="rightMargin">
+      <number>3</number>
+     </property>
+     <property name="bottomMargin">
+      <number>3</number>
+     </property>
      <item row="0" column="0">
       <layout class="QVBoxLayout" name="layerLayout">
        <item>
@@ -44,6 +42,17 @@
        </item>
        <item>
         <widget class="QgsMapLayerComboBox" name="mMapLayerComboBox"/>
+       </item>
+      </layout>
+     </item>
+     <item row="5" column="0">
+      <layout class="QVBoxLayout" name="messageLayout">
+       <item>
+        <widget class="QLineEdit" name="messageBox">
+         <property name="text">
+          <string>Messages: None</string>
+         </property>
+        </widget>
        </item>
       </layout>
      </item>
@@ -64,7 +73,7 @@
        </item>
       </layout>
      </item>
-     <item row="5" column="0">
+     <item row="6" column="0">
       <widget class="QDialogButtonBox" name="button_box">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
@@ -99,10 +108,13 @@
            <property name="text">
             <string/>
            </property>
+           <property name="checked">
+            <bool>false</bool>
+           </property>
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_4">
+          <spacer name="horizontalSpacer_2">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
@@ -127,19 +139,19 @@
             <string>m</string>
            </property>
            <property name="maximum">
-            <number>5000</number>
+            <number>10000</number>
            </property>
            <property name="value">
-            <number>900</number>
+            <number>0</number>
            </property>
           </widget>
          </item>
         </layout>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout">
+        <layout class="QHBoxLayout" name="segmentsLayout">
          <item>
-          <spacer name="horizontalSpacer_2">
+          <spacer name="segmentsHorizontalSpacer">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
@@ -162,7 +174,7 @@
           </widget>
          </item>
          <item>
-          <spacer name="horizontalSpacer_3">
+          <spacer name="horizontalSpacer_4">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
@@ -175,11 +187,27 @@
           </spacer>
          </item>
          <item>
-          <widget class="QLabel" name="label">
+          <widget class="QLabel" name="segmentsLabel">
            <property name="text">
             <string>Choose Number of Segments</string>
            </property>
           </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_3">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Fixed</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
          </item>
          <item>
           <widget class="QSpinBox" name="segmentsSpinBox"/>
